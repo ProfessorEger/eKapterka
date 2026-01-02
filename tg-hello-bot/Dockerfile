@@ -5,11 +5,11 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o app
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bot ./cmd/bot
 
 FROM gcr.io/distroless/base-debian12
 WORKDIR /app
-COPY --from=builder /app/app /app/app
+COPY --from=builder /app/bot /app/bot
 
 ENV PORT=8080
-CMD ["/app/app"]
+CMD ["/app/bot"]
