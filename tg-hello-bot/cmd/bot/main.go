@@ -3,9 +3,9 @@ package main
 import (
 	"net/http"
 
+	"tg-hello-bot/internal/bot"
 	"tg-hello-bot/internal/config"
 	"tg-hello-bot/internal/server"
-	"tg-hello-bot/internal/telegram"
 )
 
 func main() {
@@ -13,13 +13,13 @@ func main() {
 	botToken := config.MustEnv("BOT_TOKEN")
 	webhookPath := config.MustEnv("WEBHOOK_PATH")
 
-	bot := telegram.NewTelegramBot(botToken)
+	tgBot := bot.NewTelegramBot(botToken)
 
 	// Регистрируем HTTP handler
-	http.HandleFunc(webhookPath, telegram.WebhookHandler(bot))
+	http.HandleFunc(webhookPath, bot.WebhookHandler(tgBot))
 
-	go server.StartHTTPServer(port)            // старт сервера (сразу)
-	go telegram.SetupWebhook(bot, webhookPath) // регистрация вебхука (с задержкой)
+	go server.StartHTTPServer(port)         // старт сервера (сразу)
+	go bot.SetupWebhook(tgBot, webhookPath) // регистрация вебхука (с задержкой)
 
 	select {}
 }

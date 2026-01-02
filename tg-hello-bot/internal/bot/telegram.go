@@ -1,7 +1,8 @@
-package telegram
+package bot
 
 import (
 	"log"
+	"net/http"
 	"os"
 	"time"
 
@@ -33,4 +34,26 @@ func SetupWebhook(bot *tgbotapi.BotAPI, webhookPath string) {
 	}
 
 	log.Println("Webhook set successfully")
+}
+
+func WebhookHandler(bot *tgbotapi.BotAPI) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		update, err := bot.HandleUpdate(r)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		handleUpdate(bot, update)
+
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func NewTelegramBot(token string) *tgbotapi.BotAPI {
+	bot, err := tgbotapi.NewBotAPI(token)
+	if err != nil {
+		panic(err)
+	}
+	return bot
 }
