@@ -44,7 +44,7 @@ func WebhookHandler(bot *tgbotapi.BotAPI) http.HandlerFunc {
 			return
 		}
 
-		handleUpdate(bot, update)
+		EnqueueUpdate(update)
 
 		w.WriteHeader(http.StatusOK)
 	}

@@ -15,6 +15,9 @@ func main() {
 
 	tgBot := bot.NewTelegramBot(botToken)
 
+	// Запускаем worker для обработки очереди обновлений
+	bot.StartWorkers(tgBot, 1, 100)
+
 	// Регистрируем HTTP handler
 	http.HandleFunc(webhookPath, bot.WebhookHandler(tgBot))
 

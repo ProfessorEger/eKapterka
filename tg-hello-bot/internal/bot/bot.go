@@ -9,6 +9,6 @@ func handleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 		return
 	}
 
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Hello, WORLD!")
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "HELLO, WORLD!")
 	bot.Send(msg)
 }
