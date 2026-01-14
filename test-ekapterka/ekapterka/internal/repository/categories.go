@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"ekapterka/internal/models"
+	"log"
 
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
@@ -22,16 +23,12 @@ func (c *Client) GetCategoryByID(ctx context.Context, id string) (*models.Catego
 	return &cat, nil
 }
 
-func (c *Client) GetChildCategories(ctx context.Context, parentID *string) ([]models.Category, error) {
-	q := c.db.Collection("categories").Query
+func (c *Client) GetChildCategories(ctx context.Context, parentID string) ([]models.Category, error) {
+	q := c.db.Collection("categories").
+		Where("parent_id", "==", parentID).
+		OrderBy("order", firestore.Asc)
 
-	if parentID == nil {
-		q = q.Where("parent_id", "==", nil)
-	} else {
-		q = q.Where("parent_id", "==", *parentID)
-	}
-
-	iter := q.OrderBy("order", firestore.Asc).Documents(ctx)
+	iter := q.Documents(ctx)
 	defer iter.Stop()
 
 	var result []models.Category
@@ -41,14 +38,16 @@ func (c *Client) GetChildCategories(ctx context.Context, parentID *string) ([]mo
 			break
 		}
 		if err != nil {
+			log.Printf("get categories error: %v", err)
 			return nil, err
 		}
 
-		var c models.Category
-		if err := doc.DataTo(&c); err != nil {
+		var cat models.Category
+		if err := doc.DataTo(&cat); err != nil {
+			log.Printf("get categories error: %v", err)
 			return nil, err
 		}
-		result = append(result, c)
+		result = append(result, cat)
 	}
 
 	return result, nil

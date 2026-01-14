@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"context"
 	"strings"
 
 	"ekapterka/internal/models"
@@ -56,7 +55,7 @@ func (b *Bot) handleAddCommand(update *tgbotapi.Update) {
 		Tags:        []string{},
 	}
 
-	err := b.repo.AddItem(context.Background(), item)
+	err := b.repo.AddItem(b.ctx, item)
 	if err != nil {
 		msg := tgbotapi.NewMessage(chatID, "❌ Ошибка при сохранении предмета")
 		b.api.Send(msg)

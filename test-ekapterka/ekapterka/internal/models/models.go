@@ -5,7 +5,7 @@ import "time"
 type Category struct {
 	ID       string   `firestore:"id"`
 	Title    string   `firestore:"title"`
-	ParentID *string  `firestore:"parent_id"`
+	ParentID string   `firestore:"parent_id"`
 	Path     []string `firestore:"path"`
 	Level    int      `firestore:"level"`
 	Order    int      `firestore:"order"`

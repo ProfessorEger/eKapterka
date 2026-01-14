@@ -20,7 +20,7 @@ func main() {
 	client := repository.NewClient(ctx)
 	defer client.Close()
 
-	tgBot := bot.NewBot(botToken, client)
+	tgBot := bot.NewBot(botToken, client, ctx)
 
 	// Запускаем worker для обработки очереди обновлений
 	tgBot.StartWorkers(1, 100)

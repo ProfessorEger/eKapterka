@@ -1,8 +1,34 @@
 package bot
 
 import (
+	"context"
+	"ekapterka/internal/repository"
+	"log"
+	"net/http"
+	"os"
+	"time"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
+
+type Bot struct {
+	api  *tgbotapi.BotAPI
+	repo *repository.Client // или конкретный firestore.Client
+	ctx  context.Context
+}
+
+func NewBot(token string, client *repository.Client, ctx context.Context) *Bot {
+	api, err := tgbotapi.NewBotAPI(token)
+	if err != nil {
+		panic(err)
+	}
+
+	return &Bot{
+		api:  api,
+		repo: client,
+		ctx:  ctx,
+	}
+}
 
 func (b *Bot) handleUpdate(update *tgbotapi.Update) {
 	if update.CallbackQuery != nil {
@@ -14,60 +40,43 @@ func (b *Bot) handleUpdate(update *tgbotapi.Update) {
 	}
 }
 
-func renderMainMenu() (string, *tgbotapi.InlineKeyboardMarkup) {
-	text := "Главное меню:"
+func (b *Bot) SetupWebhook(webhookPath string) {
+	time.Sleep(5 * time.Second)
 
-	keyboard := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("🔍 Найти снаряжение", "menu:find"),
-			tgbotapi.NewInlineKeyboardButtonData("👤 Мой профиль", "menu:profile"),
-		),
-	)
-
-	return text, &keyboard
-}
-
-func renderCategoryKeyboard() *tgbotapi.InlineKeyboardMarkup {
-	categories := []string{
-		"Палатки",
-		"Рюкзаки",
-		"Спальники",
-		"Обувь",
-	}
-
-	var rows [][]tgbotapi.InlineKeyboardButton
-
-	for _, c := range categories {
-		btn := tgbotapi.NewInlineKeyboardButtonData(
-			c,
-			"search:category:"+c,
-		)
-		rows = append(rows, tgbotapi.NewInlineKeyboardRow(btn))
-	}
-
-	rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("⬅ Назад", "menu:main"),
-	))
-
-	return &tgbotapi.InlineKeyboardMarkup{
-		InlineKeyboard: rows,
-	}
-}
-
-func (b *Bot) displayMessage(chatID int64, messageID *int, text string, kb *tgbotapi.InlineKeyboardMarkup) {
-	if messageID == nil {
-		msg := tgbotapi.NewMessage(chatID, text)
-		msg.ReplyMarkup = kb
-		b.api.Send(msg)
+	serviceURL := os.Getenv("SERVICE_URL")
+	if serviceURL == "" {
+		log.Println("SERVICE_URL not set, skipping setWebhook")
 		return
 	}
 
-	edit := tgbotapi.NewEditMessageText(chatID, *messageID, text)
-	edit.ReplyMarkup = kb
-	b.api.Send(edit)
+	webhookURL := serviceURL + webhookPath
+	log.Println("Setting webhook to:", webhookURL)
+
+	wh, err := tgbotapi.NewWebhook(webhookURL)
+	if err != nil {
+		log.Println("Webhook config error:", err)
+		return
+	}
+
+	_, err = b.api.Request(wh)
+	if err != nil {
+		log.Println("setWebhook failed:", err)
+		return
+	}
+
+	log.Println("Webhook set successfully")
 }
 
-func (b *Bot) removeInlineKeyboard(chatID int64, messageID int) {
-	edit := tgbotapi.NewEditMessageReplyMarkup(chatID, messageID, tgbotapi.InlineKeyboardMarkup{})
-	b.api.Send(edit)
+func (b *Bot) WebhookHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		update, err := b.api.HandleUpdate(r)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		EnqueueUpdate(update)
+
+		w.WriteHeader(http.StatusOK)
+	}
 }
