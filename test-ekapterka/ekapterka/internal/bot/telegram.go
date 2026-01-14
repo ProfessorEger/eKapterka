@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"ekapterka/internal/repository"
 	"log"
 	"net/http"
 	"os"
@@ -10,16 +11,19 @@ import (
 )
 
 type Bot struct {
-	api *tgbotapi.BotAPI
+	api  *tgbotapi.BotAPI
+	repo *repository.Client // или конкретный firestore.Client
 }
 
-func NewBot(token string) *Bot {
+func NewBot(token string, client *repository.Client) *Bot {
 	api, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
 		panic(err)
 	}
+
 	return &Bot{
-		api: api,
+		api:  api,
+		repo: client,
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"cloud.google.com/go/firestore"
 )
 
+/*
 func SeedCategories(ctx context.Context, client *firestore.Client) {
 	bw := client.BulkWriter(ctx)
 	defer bw.End()
@@ -16,4 +17,17 @@ func SeedCategories(ctx context.Context, client *firestore.Client) {
 	}
 
 	bw.Flush()
+}*/
+
+func SeedCategories(ctx context.Context, client *firestore.Client) error {
+	for _, c := range Categories {
+		_, err := client.
+			Collection("categories").
+			Doc(c.ID).
+			Set(ctx, c)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

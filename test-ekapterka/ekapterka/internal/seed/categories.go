@@ -1,10 +1,14 @@
 package seed
 
+import (
+	"ekapterka/internal/models"
+)
+
 func strPtr(s string) *string {
 	return &s
 }
 
-var Categories = []Category{
+var Categories = []models.Category{
 	{
 		ID:       "equipment",
 		Title:    "Снаряжение",

@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"test-ekapterka/internal/seed"
+	"ekapterka/internal/seed"
 
 	"cloud.google.com/go/firestore"
 )
@@ -18,7 +18,10 @@ func main() {
 	}
 	defer client.Close()
 
-	seed.SeedCategories(ctx, client)
+	err = seed.SeedCategories(ctx, client)
+	if err != nil {
+		log.Fatalf("failed to seed categories: %v", err)
+	}
 
 	log.Println("Categories seeded successfully")
 }

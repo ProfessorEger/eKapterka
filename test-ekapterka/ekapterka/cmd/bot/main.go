@@ -3,9 +3,12 @@ package main
 import (
 	"net/http"
 
-	"test-ekapterka/internal/bot"
-	"test-ekapterka/internal/config"
-	"test-ekapterka/internal/server"
+	"ekapterka/internal/bot"
+	"ekapterka/internal/config"
+	"ekapterka/internal/repository"
+	"ekapterka/internal/server"
+
+	"context"
 )
 
 func main() {
@@ -13,7 +16,11 @@ func main() {
 	botToken := config.MustEnv("BOT_TOKEN")
 	webhookPath := config.MustEnv("WEBHOOK_PATH")
 
-	tgBot := bot.NewBot(botToken)
+	ctx := context.Background()
+	client := repository.NewClient(ctx)
+	defer client.Close()
+
+	tgBot := bot.NewBot(botToken, client)
 
 	// Запускаем worker для обработки очереди обновлений
 	tgBot.StartWorkers(1, 100)
