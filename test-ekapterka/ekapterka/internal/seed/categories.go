@@ -13,7 +13,7 @@ var Categories = []models.Category{
 	{
 		ID:       "equipment",
 		Title:    "Снаряжение",
-		ParentID: "",
+		ParentID: nil,
 		Path:     []string{"equipment"},
 		Level:    0,
 		Order:    10,
@@ -24,7 +24,7 @@ var Categories = []models.Category{
 	{
 		ID:       "mountain",
 		Title:    "Горное",
-		ParentID: "equipment",
+		ParentID: strPtr("equipment"),
 		Path:     []string{"equipment", "mountain"},
 		Level:    1,
 		Order:    10,
@@ -35,7 +35,7 @@ var Categories = []models.Category{
 	{
 		ID:       "hardware",
 		Title:    "Железо",
-		ParentID: "mountain",
+		ParentID: strPtr("mountain"),
 		Path:     []string{"equipment", "mountain", "hardware"},
 		Level:    2,
 		Order:    10,
@@ -44,7 +44,7 @@ var Categories = []models.Category{
 	{
 		ID:       "carabiners",
 		Title:    "Карабины",
-		ParentID: "hardware",
+		ParentID: strPtr("hardware"),
 		Path:     []string{"equipment", "mountain", "hardware", "carabiners"},
 		Level:    3,
 		Order:    10,
@@ -53,7 +53,7 @@ var Categories = []models.Category{
 	{
 		ID:       "figure_eights",
 		Title:    "Восьмерки",
-		ParentID: "hardware",
+		ParentID: strPtr("hardware"),
 		Path:     []string{"equipment", "mountain", "hardware", "figure_eights"},
 		Level:    3,
 		Order:    20,
@@ -62,7 +62,7 @@ var Categories = []models.Category{
 	{
 		ID:       "ascenders",
 		Title:    "Жумары",
-		ParentID: "hardware",
+		ParentID: strPtr("hardware"),
 		Path:     []string{"equipment", "mountain", "hardware", "ascenders"},
 		Level:    3,
 		Order:    30,
@@ -71,7 +71,7 @@ var Categories = []models.Category{
 	{
 		ID:       "hardware_other",
 		Title:    "Другое",
-		ParentID: "hardware",
+		ParentID: strPtr("hardware"),
 		Path:     []string{"equipment", "mountain", "hardware", "hardware_other"},
 		Level:    3,
 		Order:    40,
@@ -81,7 +81,7 @@ var Categories = []models.Category{
 	{
 		ID:       "ropes",
 		Title:    "Веревки",
-		ParentID: "mountain",
+		ParentID: strPtr("mountain"),
 		Path:     []string{"equipment", "mountain", "ropes"},
 		Level:    2,
 		Order:    20,
@@ -90,7 +90,7 @@ var Categories = []models.Category{
 	{
 		ID:       "crampons",
 		Title:    "Кошки",
-		ParentID: "mountain",
+		ParentID: strPtr("mountain"),
 		Path:     []string{"equipment", "mountain", "crampons"},
 		Level:    2,
 		Order:    30,
@@ -99,7 +99,7 @@ var Categories = []models.Category{
 	{
 		ID:       "ice_axes",
 		Title:    "Ледорубы",
-		ParentID: "mountain",
+		ParentID: strPtr("mountain"),
 		Path:     []string{"equipment", "mountain", "ice_axes"},
 		Level:    2,
 		Order:    40,
@@ -108,7 +108,7 @@ var Categories = []models.Category{
 	{
 		ID:       "mountain_other",
 		Title:    "Другое",
-		ParentID: "mountain",
+		ParentID: strPtr("mountain"),
 		Path:     []string{"equipment", "mountain", "mountain_other"},
 		Level:    2,
 		Order:    50,
@@ -119,7 +119,7 @@ var Categories = []models.Category{
 	{
 		ID:       "clothing_footwear",
 		Title:    "Одежда/обувь",
-		ParentID: "equipment",
+		ParentID: strPtr("equipment"),
 		Path:     []string{"equipment", "clothing_footwear"},
 		Level:    1,
 		Order:    20,
@@ -128,7 +128,7 @@ var Categories = []models.Category{
 	{
 		ID:       "clothing",
 		Title:    "Одежда",
-		ParentID: "clothing_footwear",
+		ParentID: strPtr("clothing_footwear"),
 		Path:     []string{"equipment", "clothing_footwear", "clothing"},
 		Level:    2,
 		Order:    10,
@@ -137,7 +137,7 @@ var Categories = []models.Category{
 	{
 		ID:       "footwear",
 		Title:    "Обувь",
-		ParentID: "clothing_footwear",
+		ParentID: strPtr("clothing_footwear"),
 		Path:     []string{"equipment", "clothing_footwear", "footwear"},
 		Level:    2,
 		Order:    20,
@@ -148,7 +148,7 @@ var Categories = []models.Category{
 	{
 		ID:       "water",
 		Title:    "Водное",
-		ParentID: "equipment",
+		ParentID: strPtr("equipment"),
 		Path:     []string{"equipment", "water"},
 		Level:    1,
 		Order:    30,
@@ -157,7 +157,7 @@ var Categories = []models.Category{
 	{
 		ID:       "watercraft",
 		Title:    "Плав средства",
-		ParentID: "water",
+		ParentID: strPtr("water"),
 		Path:     []string{"equipment", "water", "watercraft"},
 		Level:    2,
 		Order:    10,
@@ -166,7 +166,7 @@ var Categories = []models.Category{
 	{
 		ID:       "water_gear",
 		Title:    "Обмундирование",
-		ParentID: "water",
+		ParentID: strPtr("water"),
 		Path:     []string{"equipment", "water", "water_gear"},
 		Level:    2,
 		Order:    20,
@@ -175,7 +175,7 @@ var Categories = []models.Category{
 	{
 		ID:       "water_other",
 		Title:    "Другое",
-		ParentID: "water",
+		ParentID: strPtr("water"),
 		Path:     []string{"equipment", "water", "water_other"},
 		Level:    2,
 		Order:    30,
@@ -186,7 +186,7 @@ var Categories = []models.Category{
 	{
 		ID:       "shelters",
 		Title:    "Палатки/тенты/шатры",
-		ParentID: "equipment",
+		ParentID: strPtr("equipment"),
 		Path:     []string{"equipment", "shelters"},
 		Level:    1,
 		Order:    40,
@@ -195,7 +195,7 @@ var Categories = []models.Category{
 	{
 		ID:       "tents",
 		Title:    "Палатки",
-		ParentID: "shelters",
+		ParentID: strPtr("shelters"),
 		Path:     []string{"equipment", "shelters", "tents"},
 		Level:    2,
 		Order:    10,
@@ -204,7 +204,7 @@ var Categories = []models.Category{
 	{
 		ID:       "pavilions",
 		Title:    "Шатры",
-		ParentID: "shelters",
+		ParentID: strPtr("shelters"),
 		Path:     []string{"equipment", "shelters", "pavilions"},
 		Level:    2,
 		Order:    20,
@@ -213,7 +213,7 @@ var Categories = []models.Category{
 	{
 		ID:       "tarps",
 		Title:    "Тенты",
-		ParentID: "shelters",
+		ParentID: strPtr("shelters"),
 		Path:     []string{"equipment", "shelters", "tarps"},
 		Level:    2,
 		Order:    30,
@@ -224,7 +224,7 @@ var Categories = []models.Category{
 	{
 		ID:       "backpacks",
 		Title:    "Рюкзаки",
-		ParentID: "equipment",
+		ParentID: strPtr("equipment"),
 		Path:     []string{"equipment", "backpacks"},
 		Level:    1,
 		Order:    50,
@@ -233,7 +233,7 @@ var Categories = []models.Category{
 	{
 		ID:       "backpacks_40",
 		Title:    "до 40 литров",
-		ParentID: "backpacks",
+		ParentID: strPtr("backpacks"),
 		Path:     []string{"equipment", "backpacks", "backpacks_40"},
 		Level:    2,
 		Order:    10,
@@ -242,7 +242,7 @@ var Categories = []models.Category{
 	{
 		ID:       "backpacks_40_70",
 		Title:    "40 - 70",
-		ParentID: "backpacks",
+		ParentID: strPtr("backpacks"),
 		Path:     []string{"equipment", "backpacks", "backpacks_40_70"},
 		Level:    2,
 		Order:    20,
@@ -251,7 +251,7 @@ var Categories = []models.Category{
 	{
 		ID:       "backpacks_70_100",
 		Title:    "70 - 100 литров",
-		ParentID: "backpacks",
+		ParentID: strPtr("backpacks"),
 		Path:     []string{"equipment", "backpacks", "backpacks_70_100"},
 		Level:    2,
 		Order:    30,
@@ -261,7 +261,7 @@ var Categories = []models.Category{
 	{
 		ID:       "sleeping_bags",
 		Title:    "Спальные мешки",
-		ParentID: "equipment",
+		ParentID: strPtr("equipment"),
 		Path:     []string{"equipment", "sleeping_bags"},
 		Level:    1,
 		Order:    60,
@@ -272,7 +272,7 @@ var Categories = []models.Category{
 	{
 		ID:       "building_materials",
 		Title:    "Стройматериалы",
-		ParentID: "",
+		ParentID: nil,
 		Path:     []string{"building_materials"},
 		Level:    0,
 		Order:    20,
@@ -281,7 +281,7 @@ var Categories = []models.Category{
 	{
 		ID:       "boards",
 		Title:    "Доски",
-		ParentID: "building_materials",
+		ParentID: strPtr("building_materials"),
 		Path:     []string{"building_materials", "boards"},
 		Level:    1,
 		Order:    10,
@@ -290,7 +290,7 @@ var Categories = []models.Category{
 	{
 		ID:       "cement",
 		Title:    "Цемент",
-		ParentID: "building_materials",
+		ParentID: strPtr("building_materials"),
 		Path:     []string{"building_materials", "cement"},
 		Level:    1,
 		Order:    20,
@@ -301,7 +301,7 @@ var Categories = []models.Category{
 	{
 		ID:       "inventory",
 		Title:    "Инвентарь",
-		ParentID: "",
+		ParentID: nil,
 		Path:     []string{"inventory"},
 		Level:    0,
 		Order:    30,
@@ -310,7 +310,7 @@ var Categories = []models.Category{
 	{
 		ID:       "furniture",
 		Title:    "Мебель",
-		ParentID: "inventory",
+		ParentID: strPtr("inventory"),
 		Path:     []string{"inventory", "furniture"},
 		Level:    1,
 		Order:    10,
@@ -319,7 +319,7 @@ var Categories = []models.Category{
 	{
 		ID:       "generators",
 		Title:    "Генераторы",
-		ParentID: "inventory",
+		ParentID: strPtr("inventory"),
 		Path:     []string{"inventory", "generators"},
 		Level:    1,
 		Order:    20,

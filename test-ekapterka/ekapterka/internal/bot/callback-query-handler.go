@@ -24,7 +24,9 @@ func (b *Bot) handleCallbackQuery(update *tgbotapi.Update) {
 	case "menu:profile":
 		b.handleMenuProfileCallback(cb)
 	default:
-		if strings.HasPrefix(cb.Data, "search:category:") {
+		if cb.Data == "search:root" {
+			b.handleSearchRoot(cb)
+		} else if strings.HasPrefix(cb.Data, "search:category:") {
 			id := strings.TrimPrefix(cb.Data, "search:category:")
 			b.handleCategorySelect(cb, id)
 		}
@@ -37,7 +39,30 @@ func (b *Bot) handleMenuMainCallback(cb *tgbotapi.CallbackQuery) {
 }
 
 func (b *Bot) handleMenuFindCallback(cb *tgbotapi.CallbackQuery) {
-	categories, err := b.repo.GetChildCategories(b.ctx, "")
+	categories, err := b.repo.GetChildCategories(b.ctx, nil)
+	if err != nil {
+		b.displayMessage(
+			cb.Message.Chat.ID,
+			&cb.Message.MessageID,
+			"Ошибка загрузки категорий",
+			nil,
+		)
+		return
+	}
+
+	kb := renderCategoriesKeyboard(categories, nil)
+
+	edit := tgbotapi.NewEditMessageText(
+		cb.Message.Chat.ID,
+		cb.Message.MessageID,
+		"Выберите категорию:",
+	)
+	edit.ReplyMarkup = kb
+	b.api.Send(edit)
+}
+
+func (b *Bot) handleSearchRoot(cb *tgbotapi.CallbackQuery) {
+	categories, err := b.repo.GetChildCategories(b.ctx, nil)
 	if err != nil {
 		b.displayMessage(
 			cb.Message.Chat.ID,
@@ -86,7 +111,7 @@ func (b *Bot) handleCategorySelect(cb *tgbotapi.CallbackQuery, categoryID string
 	}
 
 	// 3. Загружаем подкатегории
-	children, err := b.repo.GetChildCategories(ctx, cat.ID)
+	children, err := b.repo.GetChildCategories(ctx, &cat.ID)
 	if err != nil {
 		b.displayMessage(
 			cb.Message.Chat.ID,
@@ -98,7 +123,7 @@ func (b *Bot) handleCategorySelect(cb *tgbotapi.CallbackQuery, categoryID string
 	}
 
 	// 4. Рендерим клавиатуру
-	kb := renderCategoriesKeyboard(children, &cat.ParentID)
+	kb := renderCategoriesKeyboard(children, cat.ParentID)
 
 	edit := tgbotapi.NewEditMessageText(
 		cb.Message.Chat.ID,

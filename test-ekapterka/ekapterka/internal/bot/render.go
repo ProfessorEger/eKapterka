@@ -19,10 +19,7 @@ func renderMainMenu() (string, *tgbotapi.InlineKeyboardMarkup) {
 	return text, &keyboard
 }
 
-func renderCategoriesKeyboard(
-	categories []models.Category,
-	parentID *string,
-) *tgbotapi.InlineKeyboardMarkup {
+func renderCategoriesKeyboard(categories []models.Category, parentID *string) *tgbotapi.InlineKeyboardMarkup {
 
 	var rows [][]tgbotapi.InlineKeyboardButton
 
@@ -35,20 +32,11 @@ func renderCategoriesKeyboard(
 		))
 	}
 
-	if parentID == nil {
-		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("⬅ В главное меню", "menu:main"),
-		))
-	} else {
-		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(
-				"⬅ Назад",
-				"search:category:"+*parentID,
-			),
-		))
-	}
+	rows = append(rows, backButton(parentID))
 
-	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: rows}
+	return &tgbotapi.InlineKeyboardMarkup{
+		InlineKeyboard: rows,
+	}
 }
 
 func (b *Bot) displayMessage(chatID int64, messageID *int, text string, kb *tgbotapi.InlineKeyboardMarkup) {
@@ -67,4 +55,22 @@ func (b *Bot) displayMessage(chatID int64, messageID *int, text string, kb *tgbo
 func (b *Bot) removeInlineKeyboard(chatID int64, messageID int) {
 	edit := tgbotapi.NewEditMessageReplyMarkup(chatID, messageID, tgbotapi.InlineKeyboardMarkup{})
 	b.api.Send(edit)
+}
+
+func backButton(parentID *string) []tgbotapi.InlineKeyboardButton {
+	if parentID == nil {
+		return []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData(
+				"⬅ Назад",
+				"search:root",
+			),
+		}
+	}
+
+	return []tgbotapi.InlineKeyboardButton{
+		tgbotapi.NewInlineKeyboardButtonData(
+			"⬅ Назад",
+			"search:category:"+*parentID,
+		),
+	}
 }

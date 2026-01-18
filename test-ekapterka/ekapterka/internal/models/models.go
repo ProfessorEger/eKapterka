@@ -5,7 +5,7 @@ import "time"
 type Category struct {
 	ID       string   `firestore:"id"`
 	Title    string   `firestore:"title"`
-	ParentID string   `firestore:"parent_id"`
+	ParentID *string  `firestore:"parent_id"`
 	Path     []string `firestore:"path"`
 	Level    int      `firestore:"level"`
 	Order    int      `firestore:"order"`
@@ -23,4 +23,15 @@ type Item struct {
 	UpdatedAt    time.Time `firestore:"updated_at"`
 }
 
-// struct User
+type UserState struct {
+	UserID    int64
+	Screen    string            // "categories", "products", "product"
+	Params    map[string]string // cat_id, product_id, page
+	History   []UserScreen      // стек
+	UpdatedAt time.Time
+}
+
+type UserScreen struct {
+	Screen string
+	Params map[string]string
+}

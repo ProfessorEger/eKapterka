@@ -23,10 +23,16 @@ func (c *Client) GetCategoryByID(ctx context.Context, id string) (*models.Catego
 	return &cat, nil
 }
 
-func (c *Client) GetChildCategories(ctx context.Context, parentID string) ([]models.Category, error) {
-	q := c.db.Collection("categories").
-		Where("parent_id", "==", parentID).
-		OrderBy("order", firestore.Asc)
+func (c *Client) GetChildCategories(ctx context.Context, parentID *string) ([]models.Category, error) {
+	q := c.db.Collection("categories").Query
+
+	if parentID == nil {
+		q = q.Where("parent_id", "==", nil)
+	} else {
+		q = q.Where("parent_id", "==", *parentID)
+	}
+
+	q = q.OrderBy("order", firestore.Asc)
 
 	iter := q.Documents(ctx)
 	defer iter.Stop()
@@ -47,6 +53,7 @@ func (c *Client) GetChildCategories(ctx context.Context, parentID string) ([]mod
 			log.Printf("get categories error: %v", err)
 			return nil, err
 		}
+
 		result = append(result, cat)
 	}
 
