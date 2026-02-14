@@ -15,7 +15,7 @@ type Category struct {
 }
 
 type Item struct {
-	//ID           string    `firestore:"id"`
+	ID           string    `firestore:"-"`
 	Title        string    `firestore:"title"`
 	Description  string    `firestore:"description"`
 	CategoryID   string    `firestore:"category_id"`

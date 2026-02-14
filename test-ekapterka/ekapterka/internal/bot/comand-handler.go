@@ -49,10 +49,11 @@ func (b *Bot) handleAddCommand(update *tgbotapi.Update) {
 	}
 
 	item := models.Item{
-		Title:       title,
-		Description: description,
-		CategoryID:  categoryID,
-		Tags:        []string{},
+		Title:        title,
+		Description:  description,
+		CategoryID:   categoryID,
+		CategoryPath: []string{},
+		Tags:         []string{},
 	}
 
 	err := b.repo.AddItem(b.ctx, item)
