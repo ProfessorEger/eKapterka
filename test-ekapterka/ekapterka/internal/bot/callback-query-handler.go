@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"ekapterka/internal/models"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -16,20 +17,18 @@ func (b *Bot) handleCallbackQuery(update *tgbotapi.Update) {
 
 	//b.removeInlineKeyboard(cb.Message.Chat.ID, cb.Message.MessageID)
 
-	switch cb.Data {
-	case "menu:main":
+	switch {
+	case cb.Data == "menu:main":
 		b.handleMenuMainCallback(cb) // или handleMenuMainCallback (отдельная функция)
-	case "menu:find":
+	case cb.Data == "menu:find":
 		b.handleMenuFindCallback(cb)
-	case "menu:profile":
+	case cb.Data == "menu:profile":
 		b.handleMenuProfileCallback(cb)
-	default:
-		if cb.Data == "search:root" {
-			b.handleSearchRoot(cb)
-		} else if strings.HasPrefix(cb.Data, "search:category:") {
-			id := strings.TrimPrefix(cb.Data, "search:category:")
-			b.handleCategorySelect(cb, id)
-		}
+	case cb.Data == "search:root":
+		b.handleMenuFindCallback(cb)
+	case strings.HasPrefix(cb.Data, "search:category:"):
+		id := strings.TrimPrefix(cb.Data, "search:category:")
+		b.handleCategorySelect(cb, id)
 	}
 }
 
@@ -38,31 +37,12 @@ func (b *Bot) handleMenuMainCallback(cb *tgbotapi.CallbackQuery) {
 	b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, text, kb)
 }
 
-func (b *Bot) handleMenuFindCallback(cb *tgbotapi.CallbackQuery) {
-	categories, err := b.repo.GetChildCategories(b.ctx, nil)
-	if err != nil {
-		b.displayMessage(
-			cb.Message.Chat.ID,
-			&cb.Message.MessageID,
-			"Ошибка загрузки категорий",
-			nil,
-		)
-		return
-	}
-
-	kb := renderCategoriesKeyboard(categories, nil)
-
-	edit := tgbotapi.NewEditMessageText(
-		cb.Message.Chat.ID,
-		cb.Message.MessageID,
-		"Выберите категорию:",
-	)
-	edit.ReplyMarkup = kb
-	b.api.Send(edit)
+func strPtr(s string) *string {
+	return &s
 }
 
-func (b *Bot) handleSearchRoot(cb *tgbotapi.CallbackQuery) {
-	categories, err := b.repo.GetChildCategories(b.ctx, nil)
+func (b *Bot) handleMenuFindCallback(cb *tgbotapi.CallbackQuery) {
+	categories, err := b.repo.GetChildCategories(b.ctx, strPtr(models.RootParentID))
 	if err != nil {
 		b.displayMessage(
 			cb.Message.Chat.ID,

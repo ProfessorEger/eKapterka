@@ -62,6 +62,15 @@ func backButton(parentID *string) []tgbotapi.InlineKeyboardButton {
 		return []tgbotapi.InlineKeyboardButton{
 			tgbotapi.NewInlineKeyboardButtonData(
 				"⬅ Назад",
+				"menu:main",
+			),
+		}
+	}
+
+	if *parentID == models.RootParentID {
+		return []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData(
+				"⬅ Назад",
 				"search:root",
 			),
 		}

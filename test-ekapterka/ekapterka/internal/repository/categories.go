@@ -27,7 +27,7 @@ func (c *Client) GetChildCategories(ctx context.Context, parentID *string) ([]mo
 	q := c.db.Collection("categories").Query
 
 	if parentID == nil {
-		q = q.Where("parent_id", "==", nil)
+		q = q.Where("parent_id", "==", models.RootParentID)
 	} else {
 		q = q.Where("parent_id", "==", *parentID)
 	}

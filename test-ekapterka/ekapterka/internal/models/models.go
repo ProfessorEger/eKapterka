@@ -2,6 +2,8 @@ package models
 
 import "time"
 
+const RootParentID = "root"
+
 type Category struct {
 	ID       string   `firestore:"id"`
 	Title    string   `firestore:"title"`
@@ -25,13 +27,13 @@ type Item struct {
 
 type UserState struct {
 	UserID    int64
-	Screen    string            // "categories", "products", "product"
-	Params    map[string]string // cat_id, product_id, page
-	History   []UserScreen      // стек
+	Screen    ScreenType
+	Params    map[string]string
+	History   []UserScreen
 	UpdatedAt time.Time
 }
 
 type UserScreen struct {
-	Screen string
+	Screen ScreenType
 	Params map[string]string
 }

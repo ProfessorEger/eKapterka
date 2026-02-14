@@ -13,7 +13,7 @@ var Categories = []models.Category{
 	{
 		ID:       "equipment",
 		Title:    "Снаряжение",
-		ParentID: nil,
+		ParentID: strPtr(models.RootParentID),
 		Path:     []string{"equipment"},
 		Level:    0,
 		Order:    10,
@@ -272,7 +272,7 @@ var Categories = []models.Category{
 	{
 		ID:       "building_materials",
 		Title:    "Стройматериалы",
-		ParentID: nil,
+		ParentID: strPtr(models.RootParentID),
 		Path:     []string{"building_materials"},
 		Level:    0,
 		Order:    20,
@@ -301,7 +301,7 @@ var Categories = []models.Category{
 	{
 		ID:       "inventory",
 		Title:    "Инвентарь",
-		ParentID: nil,
+		ParentID: strPtr(models.RootParentID),
 		Path:     []string{"inventory"},
 		Level:    0,
 		Order:    30,
