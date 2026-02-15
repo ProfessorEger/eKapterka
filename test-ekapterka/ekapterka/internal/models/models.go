@@ -21,19 +21,12 @@ type Item struct {
 	CategoryID   string    `firestore:"category_id"`
 	CategoryPath []string  `firestore:"category_path"`
 	Tags         []string  `firestore:"tags"`
+	PhotoURLs    []string  `firestore:"photo_urls"`
 	CreatedAt    time.Time `firestore:"created_at"`
 	UpdatedAt    time.Time `firestore:"updated_at"`
 }
 
 type UserState struct {
 	UserID    int64
-	Screen    ScreenType
-	Params    map[string]string
-	History   []UserScreen
 	UpdatedAt time.Time
-}
-
-type UserScreen struct {
-	Screen ScreenType
-	Params map[string]string
 }

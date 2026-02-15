@@ -225,7 +225,7 @@ func (b *Bot) handleItemSelect(cb *tgbotapi.CallbackQuery, payload string) {
 		return
 	}
 
-	text := item.Title + "/n" + item.Description
+	text := item.Title + "\n" + item.Description
 
 	edit := tgbotapi.NewEditMessageText(
 		cb.Message.Chat.ID,

@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"ekapterka/internal/repository"
+	"ekapterka/internal/storage"
 	"log"
 	"net/http"
 	"os"
@@ -14,10 +15,11 @@ import (
 type Bot struct {
 	api  *tgbotapi.BotAPI
 	repo *repository.Client // или конкретный firestore.Client
+	gcs  *storage.GCS
 	ctx  context.Context
 }
 
-func NewBot(token string, client *repository.Client, ctx context.Context) *Bot {
+func NewBot(token string, client *repository.Client, gcs *storage.GCS, ctx context.Context) *Bot {
 	api, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
 		panic(err)
@@ -26,6 +28,7 @@ func NewBot(token string, client *repository.Client, ctx context.Context) *Bot {
 	return &Bot{
 		api:  api,
 		repo: client,
+		gcs:  gcs,
 		ctx:  ctx,
 	}
 }
@@ -33,7 +36,13 @@ func NewBot(token string, client *repository.Client, ctx context.Context) *Bot {
 func (b *Bot) handleUpdate(update *tgbotapi.Update) {
 	if update.CallbackQuery != nil {
 		b.handleCallbackQuery(update)
-	} else if update.Message.IsCommand() {
+		return
+	}
+	if update.Message == nil {
+		return
+	}
+
+	if update.Message.IsCommand() || extractCommandFromCaption(update.Message) != "" {
 		b.handleCommand(update)
 	} else if update.Message.Text != "" {
 		//b.handleTextMessage(update)

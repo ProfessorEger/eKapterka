@@ -50,6 +50,14 @@ func itemFromDoc(doc *firestore.DocumentSnapshot) models.Item {
 			}
 		}
 	}
+	if rawPhotoURLs, ok := data["photo_urls"].([]interface{}); ok {
+		item.PhotoURLs = make([]string, 0, len(rawPhotoURLs))
+		for _, p := range rawPhotoURLs {
+			if s, ok := p.(string); ok {
+				item.PhotoURLs = append(item.PhotoURLs, s)
+			}
+		}
+	}
 
 	return item
 }
