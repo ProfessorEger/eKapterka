@@ -59,14 +59,7 @@ func (b *Bot) handleMenuFindCallback(cb *tgbotapi.CallbackQuery) {
 	}
 
 	kb := renderCategoriesKeyboard(categories, nil)
-
-	edit := tgbotapi.NewEditMessageText(
-		cb.Message.Chat.ID,
-		cb.Message.MessageID,
-		"Выберите категорию:",
-	)
-	edit.ReplyMarkup = kb
-	b.api.Send(edit)
+	b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, "Выберите категорию:", kb)
 }
 
 func (b *Bot) handleCategorySelect(cb *tgbotapi.CallbackQuery, categoryID string) {
@@ -104,14 +97,7 @@ func (b *Bot) handleCategorySelect(cb *tgbotapi.CallbackQuery, categoryID string
 
 	// 4. Рендерим клавиатуру
 	kb := renderCategoriesKeyboard(children, cat.ParentID)
-
-	edit := tgbotapi.NewEditMessageText(
-		cb.Message.Chat.ID,
-		cb.Message.MessageID,
-		"Выберите подкатегорию:",
-	)
-	edit.ReplyMarkup = kb
-	b.api.Send(edit)
+	b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, "Выберите подкатегорию:", kb)
 }
 
 func (b *Bot) handleItemsPageSelect(cb *tgbotapi.CallbackQuery, payload string) {
@@ -140,47 +126,29 @@ func (b *Bot) showItemsPage(cb *tgbotapi.CallbackQuery, categoryID string, page 
 
 	items, hasNext, err := b.repo.GetItemsByCategoryPage(b.ctx, categoryID, page, 10)
 	if err != nil {
-		edit := tgbotapi.NewEditMessageText(
-			cb.Message.Chat.ID,
-			cb.Message.MessageID,
-			"Ошибка загрузки товаров",
-		)
-		edit.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{
+		b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, "Ошибка загрузки товаров", &tgbotapi.InlineKeyboardMarkup{
 			InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{
 				{
 					tgbotapi.NewInlineKeyboardButtonData("⬅ Назад", backCallback),
 				},
 			},
-		}
-		b.api.Send(edit)
+		})
 		return
 	}
 
 	if len(items) == 0 {
-		edit := tgbotapi.NewEditMessageText(
-			cb.Message.Chat.ID,
-			cb.Message.MessageID,
-			"В этой категории пока нет товаров",
-		)
-		edit.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{
+		b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, "В этой категории пока нет товаров", &tgbotapi.InlineKeyboardMarkup{
 			InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{
 				{
 					tgbotapi.NewInlineKeyboardButtonData("⬅ Назад", backCallback),
 				},
 			},
-		}
-		b.api.Send(edit)
+		})
 		return
 	}
 
 	kb := renderItemsKeyboard(items, categoryID, page, hasNext, backCallback)
-	edit := tgbotapi.NewEditMessageText(
-		cb.Message.Chat.ID,
-		cb.Message.MessageID,
-		"Выберите товар:",
-	)
-	edit.ReplyMarkup = kb
-	b.api.Send(edit)
+	b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, "Выберите товар:", kb)
 }
 
 func (b *Bot) getBackCallbackForCategory(categoryID string) string {
@@ -227,12 +195,7 @@ func (b *Bot) handleItemSelect(cb *tgbotapi.CallbackQuery, payload string) {
 
 	text := item.Title + "\n" + item.Description
 
-	edit := tgbotapi.NewEditMessageText(
-		cb.Message.Chat.ID,
-		cb.Message.MessageID,
-		text,
-	)
-	edit.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{
+	kb := &tgbotapi.InlineKeyboardMarkup{
 		InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{
 			{
 				tgbotapi.NewInlineKeyboardButtonData(
@@ -242,18 +205,37 @@ func (b *Bot) handleItemSelect(cb *tgbotapi.CallbackQuery, payload string) {
 			},
 		},
 	}
-	b.api.Send(edit)
+
+	if photoURL := firstPhotoURL(item.PhotoURLs); photoURL != "" {
+		b.displayPhotoMessage(
+			cb.Message.Chat.ID,
+			&cb.Message.MessageID,
+			photoURL,
+			text,
+			kb,
+		)
+		return
+	}
+
+	b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, text, kb)
+}
+
+func firstPhotoURL(photoURLs []string) string {
+	for _, photoURL := range photoURLs {
+		photoURL = strings.TrimSpace(photoURL)
+		if photoURL != "" {
+			return photoURL
+		}
+	}
+	return ""
 }
 
 func (b *Bot) handleMenuProfileCallback(cb *tgbotapi.CallbackQuery) {
-	edit := tgbotapi.NewEditMessageText(cb.Message.Chat.ID, cb.Message.MessageID, "Пустой профиль")
-	edit.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{
+	b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, "Пустой профиль", &tgbotapi.InlineKeyboardMarkup{
 		InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{
 			{
 				tgbotapi.NewInlineKeyboardButtonData("⬅ Назад", "menu:main"),
 			},
 		},
-	}
-
-	b.api.Send(edit)
+	})
 }

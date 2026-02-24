@@ -91,12 +91,60 @@ func (b *Bot) displayMessage(chatID int64, messageID *int, text string, kb *tgbo
 
 	edit := tgbotapi.NewEditMessageText(chatID, *messageID, text)
 	edit.ReplyMarkup = kb
-	b.api.Send(edit)
+	if _, err := b.api.Send(edit); err == nil {
+		return
+	}
+
+	msg := tgbotapi.NewMessage(chatID, text)
+	msg.ReplyMarkup = kb
+	if _, err := b.api.Send(msg); err == nil {
+		b.deleteMessage(chatID, *messageID)
+	}
+}
+
+func (b *Bot) displayPhotoMessage(chatID int64, messageID *int, photoURL, caption string, kb *tgbotapi.InlineKeyboardMarkup) {
+	if messageID != nil {
+		media := tgbotapi.NewInputMediaPhoto(tgbotapi.FileURL(photoURL))
+		media.Caption = truncateTelegramCaption(caption)
+
+		edit := tgbotapi.EditMessageMediaConfig{
+			BaseEdit: tgbotapi.BaseEdit{
+				ChatID:      chatID,
+				MessageID:   *messageID,
+				ReplyMarkup: kb,
+			},
+			Media: media,
+		}
+		if _, err := b.api.Send(edit); err == nil {
+			return
+		}
+	}
+
+	msg := tgbotapi.NewPhoto(chatID, tgbotapi.FileURL(photoURL))
+	msg.Caption = truncateTelegramCaption(caption)
+	msg.ReplyMarkup = kb
+	if _, err := b.api.Send(msg); err == nil && messageID != nil {
+		b.deleteMessage(chatID, *messageID)
+	}
 }
 
 func (b *Bot) removeInlineKeyboard(chatID int64, messageID int) {
 	edit := tgbotapi.NewEditMessageReplyMarkup(chatID, messageID, tgbotapi.InlineKeyboardMarkup{})
 	b.api.Send(edit)
+}
+
+func (b *Bot) deleteMessage(chatID int64, messageID int) {
+	del := tgbotapi.NewDeleteMessage(chatID, messageID)
+	b.api.Send(del)
+}
+
+func truncateTelegramCaption(text string) string {
+	const maxCaptionRunes = 1024
+	runes := []rune(text)
+	if len(runes) <= maxCaptionRunes {
+		return text
+	}
+	return string(runes[:maxCaptionRunes-1]) + "…"
 }
 
 func backButton(parentID *string) []tgbotapi.InlineKeyboardButton {
