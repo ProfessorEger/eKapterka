@@ -3,6 +3,8 @@ package models
 import "time"
 
 const RootParentID = "root"
+const ADMIN = "admin"
+const USER = "user"
 
 type Category struct {
 	ID       string   `firestore:"id"`
@@ -27,6 +29,8 @@ type Item struct {
 }
 
 type UserState struct {
-	UserID    int64
-	UpdatedAt time.Time
+	UserID    int64     `firestore:"id"`
+	Role      string    `firestore:"role"`
+	CreatedAt time.Time `firestore:"created_at"`
+	MessageID int64     `firestore:"message_id"`
 }

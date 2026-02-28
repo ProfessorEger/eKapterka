@@ -2,7 +2,9 @@ package bot
 
 import (
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -19,19 +21,76 @@ func (b *Bot) handleCommand(update *tgbotapi.Update) {
 
 	switch command {
 	case "start":
-		b.handleStartCommand(update.Message.Chat.ID)
+		b.handleStartCommand(update.Message)
 	case "add":
 		b.handleAddCommand(update)
+	case "getadmin":
+		b.handleGetAdminCommand(update)
 	default:
 		return
 	}
 }
 
-func (b *Bot) handleStartCommand(chatID int64) {
+func (b *Bot) handleStartCommand(msg *tgbotapi.Message) {
+	if msg == nil {
+		return
+	}
+
+	userID := msg.Chat.ID
+	if msg.From != nil {
+		userID = msg.From.ID
+	}
+
+	if err := b.repo.EnsureUserState(b.ctx, userID); err != nil {
+		log.Printf("ensure user state failed for user %d: %v", userID, err)
+	}
+
 	text, kb := renderMainMenu()
-	b.displayMessage(chatID, nil, text, kb)
+	b.displayMessage(msg.Chat.ID, nil, text, kb)
 }
 
+func (b *Bot) handleGetAdminCommand(update *tgbotapi.Update) {
+	if update == nil || update.Message == nil {
+		return
+	}
+
+	code := strings.TrimSpace(update.Message.CommandArguments())
+	if code == "" {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "❌ Укажите код: /getadmin <код>")
+		b.api.Send(msg)
+		return
+	}
+
+	adminCode := strings.TrimSpace(os.Getenv("ADMIN_CODE"))
+	if adminCode == "" {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "❌ ADMIN_CODE не настроен на сервере")
+		b.api.Send(msg)
+		return
+	}
+	if code != adminCode {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "❌ Неверный код")
+		b.api.Send(msg)
+		return
+	}
+
+	userID := update.Message.Chat.ID
+	if update.Message.From != nil {
+		userID = update.Message.From.ID
+	}
+
+	if err := b.repo.SetUserRole(b.ctx, userID, models.ADMIN); err != nil {
+		log.Printf("set admin role failed for user %d: %v", userID, err)
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "❌ Не удалось выдать роль администратора")
+		b.api.Send(msg)
+		return
+	}
+
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "✅ Роль администратора выдана")
+	b.api.Send(msg)
+
+}
+
+// TODO: проверить что юзер админ, перед выполнением
 func (b *Bot) handleAddCommand(update *tgbotapi.Update) {
 	chatID := update.Message.Chat.ID
 	text := update.Message.Text
@@ -85,6 +144,12 @@ func (b *Bot) handleAddCommand(update *tgbotapi.Update) {
 	msg := tgbotapi.NewMessage(chatID, "✅ Предмет успешно добавлен")
 	b.api.Send(msg)
 }
+
+//TODO: команда для админа. вывести список категорий в которых можно добавлять предметы (LEAF категории)
+
+//TODO: команда для админа. изменить премет (по id). формат команды: /edit <id>\nНовое название\nНовая категория\nНовое описание. Если команда вызвана с фото, то заменть фото. При  этом удалить старое фотот из хранилища
+
+//TODO: команда для админа. удалить предмет (по id). формат команды: /delete <id>. При этом удалить фото из хранилища
 
 func (b *Bot) uploadMessagePhotos(msg *tgbotapi.Message) ([]string, error) {
 	if msg == nil || len(msg.Photo) == 0 {
