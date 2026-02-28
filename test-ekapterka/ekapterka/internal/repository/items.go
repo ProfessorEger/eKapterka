@@ -138,3 +138,21 @@ func (c *Client) GetItemByID(ctx context.Context, id string) (*models.Item, erro
 
 	return &item, nil
 }
+
+func (c *Client) UpdateItem(
+	ctx context.Context,
+	id string,
+	title string,
+	categoryID string,
+	description string,
+	photoURLs []string,
+) error {
+	_, err := c.db.Collection("items").Doc(id).Update(ctx, []firestore.Update{
+		{Path: "title", Value: title},
+		{Path: "category_id", Value: categoryID},
+		{Path: "description", Value: description},
+		{Path: "photo_urls", Value: photoURLs},
+		{Path: "updated_at", Value: time.Now()},
+	})
+	return err
+}

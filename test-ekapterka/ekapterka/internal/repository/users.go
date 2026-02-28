@@ -64,3 +64,36 @@ func (c *Client) SetUserRole(ctx context.Context, userID int64, role string) err
 	})
 	return err
 }
+
+func (c *Client) GetUserRole(ctx context.Context, userID int64) (string, error) {
+	docID := strconv.FormatInt(userID, 10)
+	docRef := c.db.Collection(usersCollection).Doc(docID)
+
+	doc, err := docRef.Get(ctx)
+	if err == nil {
+		var state models.UserState
+		if err := doc.DataTo(&state); err != nil {
+			return "", err
+		}
+		return state.Role, nil
+	}
+	if status.Code(err) != codes.NotFound {
+		return "", err
+	}
+
+	if err := c.EnsureUserState(ctx, userID); err != nil {
+		return "", err
+	}
+
+	doc, err = docRef.Get(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	var state models.UserState
+	if err := doc.DataTo(&state); err != nil {
+		return "", err
+	}
+
+	return state.Role, nil
+}

@@ -1,9 +1,11 @@
 package bot
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -24,6 +26,8 @@ func (b *Bot) handleCommand(update *tgbotapi.Update) {
 		b.handleStartCommand(update.Message)
 	case "add":
 		b.handleAddCommand(update)
+	case "edit":
+		b.handleEditCommand(update)
 	case "getadmin":
 		b.handleGetAdminCommand(update)
 	default:
@@ -90,8 +94,11 @@ func (b *Bot) handleGetAdminCommand(update *tgbotapi.Update) {
 
 }
 
-// TODO: проверить что юзер админ, перед выполнением
 func (b *Bot) handleAddCommand(update *tgbotapi.Update) {
+	if !b.requireAdmin(update) {
+		return
+	}
+
 	chatID := update.Message.Chat.ID
 	text := update.Message.Text
 	if strings.TrimSpace(text) == "" {
@@ -147,9 +154,110 @@ func (b *Bot) handleAddCommand(update *tgbotapi.Update) {
 
 //TODO: команда для админа. вывести список категорий в которых можно добавлять предметы (LEAF категории)
 
-//TODO: команда для админа. изменить премет (по id). формат команды: /edit <id>\nНовое название\nНовая категория\nНовое описание. Если команда вызвана с фото, то заменть фото. При  этом удалить старое фотот из хранилища
+func (b *Bot) handleEditCommand(update *tgbotapi.Update) {
+	if !b.requireAdmin(update) {
+		return
+	}
+
+	chatID := update.Message.Chat.ID
+	text := update.Message.Text
+	if strings.TrimSpace(text) == "" {
+		text = update.Message.Caption
+	}
+
+	lines := strings.Split(text, "\n")
+	if len(lines) < 4 {
+		msg := tgbotapi.NewMessage(
+			chatID,
+			"❌ Неверный формат.\n\nИспользуй:\n/edit <id>\nНовое название\nНовая категория\nНовое описание",
+		)
+		b.api.Send(msg)
+		return
+	}
+
+	headFields := strings.Fields(strings.TrimSpace(lines[0]))
+	if len(headFields) < 2 {
+		msg := tgbotapi.NewMessage(chatID, "❌ Укажите ID: /edit <id>")
+		b.api.Send(msg)
+		return
+	}
+
+	itemID := strings.TrimSpace(headFields[1])
+	title := strings.TrimSpace(lines[1])
+	categoryID := strings.TrimSpace(lines[2])
+	description := strings.TrimSpace(lines[3])
+
+	if itemID == "" || title == "" || categoryID == "" {
+		msg := tgbotapi.NewMessage(chatID, "❌ ID, название и категория обязательны")
+		b.api.Send(msg)
+		return
+	}
+
+	oldItem, err := b.repo.GetItemByID(b.ctx, itemID)
+	if err != nil {
+		msg := tgbotapi.NewMessage(chatID, "❌ Предмет не найден")
+		b.api.Send(msg)
+		return
+	}
+
+	photoURLs := oldItem.PhotoURLs
+	replacePhoto := len(update.Message.Photo) > 0
+	if replacePhoto {
+		photoURLs, err = b.uploadMessagePhotos(update.Message)
+		if err != nil {
+			msg := tgbotapi.NewMessage(chatID, "❌ Ошибка при загрузке нового фото")
+			b.api.Send(msg)
+			return
+		}
+	}
+
+	err = b.repo.UpdateItem(b.ctx, itemID, title, categoryID, description, photoURLs)
+	if err != nil {
+		msg := tgbotapi.NewMessage(chatID, "❌ Ошибка при обновлении предмета")
+		b.api.Send(msg)
+		return
+	}
+
+	if replacePhoto {
+		if err := b.deleteItemPhotos(oldItem.PhotoURLs); err != nil {
+			log.Printf("delete old photos for item %s failed: %v", itemID, err)
+			msg := tgbotapi.NewMessage(chatID, "⚠️ Предмет обновлен, но старое фото удалить не удалось")
+			b.api.Send(msg)
+			return
+		}
+	}
+
+	msg := tgbotapi.NewMessage(chatID, "✅ Предмет успешно обновлен")
+	b.api.Send(msg)
+}
 
 //TODO: команда для админа. удалить предмет (по id). формат команды: /delete <id>. При этом удалить фото из хранилища
+
+func (b *Bot) requireAdmin(update *tgbotapi.Update) bool {
+	if update == nil || update.Message == nil {
+		return false
+	}
+
+	userID := update.Message.Chat.ID
+	if update.Message.From != nil {
+		userID = update.Message.From.ID
+	}
+
+	role, err := b.repo.GetUserRole(b.ctx, userID)
+	if err != nil {
+		log.Printf("get user role failed for user %d: %v", userID, err)
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "❌ Не удалось проверить права доступа")
+		b.api.Send(msg)
+		return false
+	}
+	if role != models.ADMIN {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "⛔ Команда доступна только администратору")
+		b.api.Send(msg)
+		return false
+	}
+
+	return true
+}
 
 func (b *Bot) uploadMessagePhotos(msg *tgbotapi.Message) ([]string, error) {
 	if msg == nil || len(msg.Photo) == 0 {
@@ -195,6 +303,56 @@ func (b *Bot) uploadMessagePhotos(msg *tgbotapi.Message) ([]string, error) {
 	}
 
 	return []string{b.gcs.PublicURL(objectPath)}, nil
+}
+
+func (b *Bot) deleteItemPhotos(photoURLs []string) error {
+	if b.gcs == nil {
+		return fmt.Errorf("gcs is not configured")
+	}
+
+	var failed []string
+	for _, photoURL := range photoURLs {
+		objectPath := gcsObjectPathFromPublicURL(photoURL)
+		if objectPath == "" {
+			continue
+		}
+		if err := b.gcs.Delete(b.ctx, objectPath); err != nil {
+			failed = append(failed, err.Error())
+		}
+	}
+
+	if len(failed) > 0 {
+		return errors.New(strings.Join(failed, "; "))
+	}
+
+	return nil
+}
+
+func gcsObjectPathFromPublicURL(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+
+	u, err := url.Parse(raw)
+	if err != nil {
+		return ""
+	}
+
+	if u.Host == "storage.googleapis.com" {
+		pathValue := strings.TrimPrefix(u.Path, "/")
+		parts := strings.SplitN(pathValue, "/", 2)
+		if len(parts) != 2 {
+			return ""
+		}
+		return strings.TrimSpace(parts[1])
+	}
+
+	if strings.HasSuffix(u.Host, ".storage.googleapis.com") {
+		return strings.TrimPrefix(strings.TrimSpace(u.Path), "/")
+	}
+
+	return ""
 }
 
 func extractCommandFromCaption(msg *tgbotapi.Message) string {
