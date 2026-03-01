@@ -18,10 +18,11 @@ func main() {
 	botToken := config.MustEnv("BOT_TOKEN")
 	webhookPath := config.MustEnv("WEBHOOK_PATH")
 	storageID := config.MustEnv("STORAGE_ID")
+	firestoreProjectID := config.MustEnv("FIRESTORE_PROJECT_ID")
 
 	ctx := context.Background()
 	gcs := storage.NewGCS(ctx, storageID)
-	client := repository.NewClient(ctx)
+	client := repository.NewClient(ctx, firestoreProjectID)
 	defer client.Close()
 
 	tgBot := bot.NewBot(botToken, client, gcs, ctx)

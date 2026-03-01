@@ -46,6 +46,7 @@ eKapterka — это Telegram-бот для просмотра и управле
 Полная техническая документация находится в каталоге [`docs/`](./docs):
 
 - [`docs/architecture.md`](./docs/architecture.md)
+- [`docs/business-logic.md`](./docs/business-logic.md)
 - [`docs/data-model.md`](./docs/data-model.md)
 - [`docs/deployment.md`](./docs/deployment.md)
 - [`docs/bot-flows.md`](./docs/bot-flows.md)
@@ -82,6 +83,7 @@ eKapterka — это Telegram-бот для просмотра и управле
 - `BOT_TOKEN` - токен Telegram-бота
 - `WEBHOOK_PATH` - путь webhook (например `/webhook`)
 - `STORAGE_ID` - имя GCS bucket для фото
+- `FIRESTORE_PROJECT_ID` - ID GCP-проекта, используемый для инициализации Firestore клиента
 
 Опциональные:
 
@@ -91,12 +93,7 @@ eKapterka — это Telegram-бот для просмотра и управле
 
 Важно:
 
-Project ID Firestore сейчас захардкожен как `e-kapterka` в:
-
-- `ekapterka/internal/repository/client.go`
-- `ekapterka/cmd/seed/main.go`
-
-Если вы используете другой GCP project, обновите эти файлы.
+`FIRESTORE_PROJECT_ID` должен совпадать с точным ID Google Cloud проекта, в котором находится ваша база Firestore.
 
 ## Быстрый старт
 
@@ -109,6 +106,7 @@ export PORT=8080
 export BOT_TOKEN=<telegram_token>
 export WEBHOOK_PATH=/webhook
 export STORAGE_ID=<gcs_bucket_name>
+export FIRESTORE_PROJECT_ID=<your-gcp-project-id>
 export SERVICE_URL=<https_public_url_optional>
 export ADMIN_CODE=<admin_code_optional>
 export GOOGLE_APPLICATION_CREDENTIALS=<path_to_service_account_json>
@@ -121,6 +119,7 @@ go run ./cmd/bot
 ```bash
 cd ekapterka
 export GOOGLE_APPLICATION_CREDENTIALS=<path_to_service_account_json>
+export FIRESTORE_PROJECT_ID=<your-gcp-project-id>
 go run ./cmd/seed
 ```
 
@@ -135,6 +134,7 @@ docker run --rm -p 8080:8080 \
   -e BOT_TOKEN=<telegram_token> \
   -e WEBHOOK_PATH=/webhook \
   -e STORAGE_ID=<gcs_bucket_name> \
+  -e FIRESTORE_PROJECT_ID=<your-gcp-project-id> \
   -e SERVICE_URL=<https_public_url_optional> \
   -e ADMIN_CODE=<admin_code_optional> \
   -e GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp.json \
@@ -156,6 +156,7 @@ export SERVICE_NAME="tg-bot"
 export WEBHOOK_PATH="/webhook"
 export BUCKET_NAME="<unique-bucket-name>"   # must be globally unique
 export ADMIN_CODE="<strong-admin-code>"
+export FIRESTORE_PROJECT_ID="$PROJECT_ID"
 ```
 
 ### 2. Авторизуйтесь и выберите проект
@@ -237,7 +238,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --source . \
   --region "$REGION" \
   --allow-unauthenticated \
-  --set-env-vars "WEBHOOK_PATH=$WEBHOOK_PATH,STORAGE_ID=$BUCKET_NAME" \
+  --set-env-vars "WEBHOOK_PATH=$WEBHOOK_PATH,STORAGE_ID=$BUCKET_NAME,FIRESTORE_PROJECT_ID=$FIRESTORE_PROJECT_ID" \
   --set-secrets "BOT_TOKEN=bot-token:latest,ADMIN_CODE=admin-code:latest"
 ```
 
@@ -278,8 +279,7 @@ gcloud run services describe "$SERVICE_NAME" \
 
 Примечания:
 
-- В текущем коде project ID Firestore захардкожен как `e-kapterka` в `internal/repository/client.go` и `cmd/seed/main.go`.  
-  Если ваш GCP project ID отличается, обновите эти файлы до деплоя.
+- `FIRESTORE_PROJECT_ID` должен указывать на GCP-проект, в котором включен Firestore.
 - `SERVICE_URL` обязателен для автоматической регистрации webhook в процессе старта.
 - Для production лучше использовать выделенный сервисный аккаунт вместо дефолтного compute service account.
 
@@ -359,7 +359,6 @@ GOCACHE=/tmp/go-build-cache go test ./...
 ## Известные ограничения
 
 - Большая часть UI-текста бота сейчас на русском.
-- Project ID Firestore захардкожен в двух местах (см. [Конфигурация](#конфигурация)).
 - Поле `tags` есть в модели, но команд управления тегами пока нет.
 
 ## Лицензия

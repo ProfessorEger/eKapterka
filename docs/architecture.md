@@ -75,7 +75,7 @@ Provides Firestore access abstractions:
 
 Notable design choices:
 
-- Firestore project ID is hardcoded as `e-kapterka` in `client.go`.
+- Firestore project ID is provided via required env var `FIRESTORE_PROJECT_ID`.
 - Item pagination uses `offset` + `limit+1` for has-next detection.
 - Item query includes fallback without ordering if indexed order query fails.
 - Backward compatibility for legacy field `rental_periods` when decoding item documents.
@@ -91,7 +91,7 @@ Notable design choices:
 
 - Writes predefined category tree to Firestore `categories` collection.
 - Uses deterministic IDs and full path metadata for each category.
-- Firestore project ID is also hardcoded as `e-kapterka` in `cmd/seed/main.go`.
+- Seed tool also reads Firestore project ID from `FIRESTORE_PROJECT_ID`.
 
 ## 4. Request/Update Processing Flow
 
@@ -178,18 +178,16 @@ Operational implications:
 
 ## 8. Known Architectural Constraints
 
-1. Firestore project ID is hardcoded in code paths.
-2. No repository interfaces for dependency inversion/testing.
-3. No migration framework; schema evolves in-code.
-4. Message language and UX text are currently mostly Russian.
-5. Update queue is process-local and not distributed.
+1. No repository interfaces for dependency inversion/testing.
+2. No migration framework; schema evolves in-code.
+3. Message language and UX text are currently mostly Russian.
+4. Update queue is process-local and not distributed.
 
 ## 9. Extension Points
 
 Recommended extension directions:
 
-1. Externalize Firestore project ID as env var.
-2. Replace in-memory queue with managed queue (Pub/Sub / Cloud Tasks).
-3. Add structured logging + metrics.
-4. Add unit and integration tests around command/callback handlers.
-5. Introduce explicit domain service layer if business logic grows.
+1. Replace in-memory queue with managed queue (Pub/Sub / Cloud Tasks).
+2. Add structured logging + metrics.
+3. Add unit and integration tests around command/callback handlers.
+4. Introduce explicit domain service layer if business logic grows.

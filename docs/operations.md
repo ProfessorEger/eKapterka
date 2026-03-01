@@ -94,12 +94,12 @@ Checks:
 
 1. Runtime service account has Firestore permissions (`roles/datastore.user` or stronger).
 2. Firestore API enabled.
-3. Firestore project ID in code matches deployment project.
+3. `FIRESTORE_PROJECT_ID` matches deployment project.
 
 Fixes:
 
 - Grant IAM role.
-- Update hardcoded project ID and redeploy.
+- Update `FIRESTORE_PROJECT_ID` and redeploy.
 
 ## 3.5 Admin role cannot be granted
 

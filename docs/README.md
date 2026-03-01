@@ -5,6 +5,7 @@ This folder contains detailed technical documentation for the eKapterka project.
 ## Contents
 
 - [`architecture.md`](./architecture.md): system architecture, runtime flow, components, and boundaries
+- [`business-logic.md`](./business-logic.md): domain rules, user/admin scenarios, and operational business constraints
 - [`data-model.md`](./data-model.md): Firestore collections, field schema, invariants, and query patterns
 - [`deployment.md`](./deployment.md): end-to-end deployment to Google Cloud Run from scratch
 - [`bot-flows.md`](./bot-flows.md): command and callback behavior, UI navigation, and message rendering rules

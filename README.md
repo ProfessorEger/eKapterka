@@ -46,6 +46,7 @@ eKapterka is a Telegram bot for browsing and managing outdoor gear inventory, wi
 For full technical documentation, see the [`docs/`](./docs) directory:
 
 - [`docs/architecture.md`](./docs/architecture.md)
+- [`docs/business-logic.md`](./docs/business-logic.md)
 - [`docs/data-model.md`](./docs/data-model.md)
 - [`docs/deployment.md`](./docs/deployment.md)
 - [`docs/bot-flows.md`](./docs/bot-flows.md)
@@ -82,6 +83,7 @@ Required:
 - `BOT_TOKEN` - Telegram bot token
 - `WEBHOOK_PATH` - webhook route (for example `/webhook`)
 - `STORAGE_ID` - GCS bucket name for photos
+- `FIRESTORE_PROJECT_ID` - GCP project ID used to initialize Firestore client
 
 Optional:
 
@@ -91,12 +93,7 @@ Optional:
 
 Important:
 
-Firestore project ID is currently hardcoded as `e-kapterka` in:
-
-- `ekapterka/internal/repository/client.go`
-- `ekapterka/cmd/seed/main.go`
-
-If you use a different GCP project, update those files.
+Set `FIRESTORE_PROJECT_ID` to the exact Google Cloud project ID where your Firestore database is located.
 
 ## Quick Start
 
@@ -109,6 +106,7 @@ export PORT=8080
 export BOT_TOKEN=<telegram_token>
 export WEBHOOK_PATH=/webhook
 export STORAGE_ID=<gcs_bucket_name>
+export FIRESTORE_PROJECT_ID=<your-gcp-project-id>
 export SERVICE_URL=<https_public_url_optional>
 export ADMIN_CODE=<admin_code_optional>
 export GOOGLE_APPLICATION_CREDENTIALS=<path_to_service_account_json>
@@ -121,6 +119,7 @@ Seed categories:
 ```bash
 cd ekapterka
 export GOOGLE_APPLICATION_CREDENTIALS=<path_to_service_account_json>
+export FIRESTORE_PROJECT_ID=<your-gcp-project-id>
 go run ./cmd/seed
 ```
 
@@ -135,6 +134,7 @@ docker run --rm -p 8080:8080 \
   -e BOT_TOKEN=<telegram_token> \
   -e WEBHOOK_PATH=/webhook \
   -e STORAGE_ID=<gcs_bucket_name> \
+  -e FIRESTORE_PROJECT_ID=<your-gcp-project-id> \
   -e SERVICE_URL=<https_public_url_optional> \
   -e ADMIN_CODE=<admin_code_optional> \
   -e GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp.json \
@@ -156,6 +156,7 @@ export SERVICE_NAME="tg-bot"
 export WEBHOOK_PATH="/webhook"
 export BUCKET_NAME="<unique-bucket-name>"   # must be globally unique
 export ADMIN_CODE="<strong-admin-code>"
+export FIRESTORE_PROJECT_ID="$PROJECT_ID"
 ```
 
 ### 2. Authenticate and select project
@@ -237,7 +238,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --source . \
   --region "$REGION" \
   --allow-unauthenticated \
-  --set-env-vars "WEBHOOK_PATH=$WEBHOOK_PATH,STORAGE_ID=$BUCKET_NAME" \
+  --set-env-vars "WEBHOOK_PATH=$WEBHOOK_PATH,STORAGE_ID=$BUCKET_NAME,FIRESTORE_PROJECT_ID=$FIRESTORE_PROJECT_ID" \
   --set-secrets "BOT_TOKEN=bot-token:latest,ADMIN_CODE=admin-code:latest"
 ```
 
@@ -278,8 +279,7 @@ Open the bot in Telegram and run `/start`.
 
 Notes:
 
-- In this codebase, Firestore project ID is hardcoded as `e-kapterka` in `internal/repository/client.go` and `cmd/seed/main.go`.  
-  If your GCP project ID is different, update those files before deploy.
+- `FIRESTORE_PROJECT_ID` must point to the GCP project where Firestore is enabled.
 - `SERVICE_URL` is required for automatic webhook registration inside the bot startup flow.
 - For production, prefer a dedicated service account instead of the default compute service account.
 
@@ -359,7 +359,6 @@ GOCACHE=/tmp/go-build-cache go test ./...
 ## Known Limitations
 
 - Most bot UI text is currently in Russian.
-- Firestore project ID is hardcoded in two places (see [Configuration](#configuration)).
 - `tags` exist in the model, but there are no tag management commands yet.
 
 ## License

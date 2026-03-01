@@ -29,6 +29,7 @@ Env vars required for local bot run:
 - `BOT_TOKEN`
 - `WEBHOOK_PATH`
 - `STORAGE_ID`
+- `FIRESTORE_PROJECT_ID`
 
 Optional:
 
@@ -44,6 +45,7 @@ export PORT=8080
 export BOT_TOKEN=<telegram-token>
 export WEBHOOK_PATH=/webhook
 export STORAGE_ID=<bucket-name>
+export FIRESTORE_PROJECT_ID=<your-gcp-project-id>
 export GOOGLE_APPLICATION_CREDENTIALS=<path-to-sa-json>
 go run ./cmd/bot
 ```
@@ -52,6 +54,7 @@ Seed categories:
 
 ```bash
 cd ekapterka
+export FIRESTORE_PROJECT_ID=<your-gcp-project-id>
 go run ./cmd/seed
 ```
 
@@ -80,7 +83,7 @@ docker build -t ekapterka-bot .
 
 ## 5. Coding Constraints in Current Design
 
-1. Firestore project ID is hardcoded in two files.
+1. `FIRESTORE_PROJECT_ID` must be provided and point to a project with Firestore enabled.
 2. Bot logic is strongly coupled to concrete repository/storage clients.
 3. Queue is process-local and not suitable for exactly-once semantics.
 4. UI text is mostly Russian and spread across handlers.

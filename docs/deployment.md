@@ -18,6 +18,7 @@ Required:
 - `BOT_TOKEN`: Telegram bot token.
 - `WEBHOOK_PATH`: webhook endpoint path (e.g. `/webhook`).
 - `STORAGE_ID`: GCS bucket name for item photos.
+- `FIRESTORE_PROJECT_ID`: GCP project ID where Firestore is enabled.
 
 Optional:
 
@@ -44,14 +45,13 @@ Notes:
 5. Firestore native database created.
 6. GCS bucket created for photos.
 
-## 4. Important Code Constraint
+## 4. Firestore Project Selection
 
-Firestore project ID is hardcoded as `e-kapterka` in:
+Firestore client initialization is controlled by `FIRESTORE_PROJECT_ID`.
 
-- `internal/repository/client.go`
-- `cmd/seed/main.go`
+Deployment requirement:
 
-Before deploying to another project, update these files and redeploy.
+- `FIRESTORE_PROJECT_ID` must match the project where your Firestore database exists.
 
 ## 5. Recommended Secret Strategy
 
@@ -76,6 +76,7 @@ export WEBHOOK_PATH="/webhook"
 export BUCKET_NAME="<unique-bucket-name>"
 export REPO_DIR="<absolute-path-to-repo>"
 export ADMIN_CODE_VALUE="<strong-admin-code>"
+export FIRESTORE_PROJECT_ID="$PROJECT_ID"
 ```
 
 ### 6.2 Authenticate and select project
@@ -151,7 +152,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --source . \
   --region "$REGION" \
   --allow-unauthenticated \
-  --set-env-vars "WEBHOOK_PATH=$WEBHOOK_PATH,STORAGE_ID=$BUCKET_NAME" \
+  --set-env-vars "WEBHOOK_PATH=$WEBHOOK_PATH,STORAGE_ID=$BUCKET_NAME,FIRESTORE_PROJECT_ID=$FIRESTORE_PROJECT_ID" \
   --set-secrets "BOT_TOKEN=bot-token:latest,ADMIN_CODE=admin-code:latest"
 ```
 
@@ -204,6 +205,7 @@ docker run --rm -p 8080:8080 \
   -e BOT_TOKEN=<telegram-token> \
   -e WEBHOOK_PATH=/webhook \
   -e STORAGE_ID=<bucket-name> \
+  -e FIRESTORE_PROJECT_ID=<your-gcp-project-id> \
   -e SERVICE_URL=<public-url-optional> \
   -e ADMIN_CODE=<admin-code-optional> \
   ekapterka-bot
