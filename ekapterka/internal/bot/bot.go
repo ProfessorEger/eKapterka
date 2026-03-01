@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -17,6 +18,9 @@ type Bot struct {
 	repo *repository.Client // или конкретный firestore.Client
 	gcs  *storage.GCS
 	ctx  context.Context
+
+	quartermasterContactOnce sync.Once
+	quartermasterContact     string
 }
 
 func NewBot(token string, client *repository.Client, gcs *storage.GCS, ctx context.Context) *Bot {

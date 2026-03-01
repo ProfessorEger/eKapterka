@@ -2,6 +2,7 @@ package bot
 
 import (
 	"ekapterka/internal/models"
+	"encoding/json"
 	"html"
 	"log"
 	"sort"
@@ -204,7 +205,7 @@ func (b *Bot) handleItemSelect(cb *tgbotapi.CallbackQuery, payload string) {
 		}
 	}
 
-	text, parseMode := renderItemCardText(item, isAdmin)
+	text, parseMode := renderItemCardText(item, isAdmin, b.getQuartermasterContact())
 
 	kb := &tgbotapi.InlineKeyboardMarkup{
 		InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{
@@ -235,7 +236,7 @@ func (b *Bot) handleItemSelect(cb *tgbotapi.CallbackQuery, payload string) {
 	b.displayMessageWithParseMode(cb.Message.Chat.ID, &cb.Message.MessageID, text, kb, parseMode)
 }
 
-func renderItemCardText(item *models.Item, isAdmin bool) (string, string) {
+func renderItemCardText(item *models.Item, isAdmin bool, quartermasterContact string) (string, string) {
 	const rentalDateLayout = "02.01.2006"
 
 	lines := []string{
@@ -275,9 +276,45 @@ func renderItemCardText(item *models.Item, isAdmin bool) (string, string) {
 		}
 	}
 
-	lines = append(lines, "\nДля того чтобы арендовать, пишите каптерщику @ProfessorEger")
+	lines = append(lines, "\nДля того чтобы арендовать, пишите каптерщику "+html.EscapeString(quartermasterContact))
 
 	return strings.Join(lines, "\n"), tgbotapi.ModeHTML
+}
+
+func (b *Bot) getQuartermasterContact() string {
+	const fallbackContact = ""
+
+	b.quartermasterContactOnce.Do(func() {
+		b.quartermasterContact = fallbackContact
+
+		resp, err := b.api.MakeRequest("getMyDescription", nil)
+		if err != nil {
+			log.Printf("get bot description failed: %v", err)
+			return
+		}
+
+		var descriptionResp struct {
+			Description string `json:"description"`
+		}
+		if err := json.Unmarshal(resp.Result, &descriptionResp); err != nil {
+			log.Printf("decode bot description failed: %v", err)
+			return
+		}
+
+		words := strings.Fields(strings.TrimSpace(descriptionResp.Description))
+		if len(words) == 0 {
+			return
+		}
+
+		contact := strings.Trim(words[0], ".,;:!?()[]{}")
+		if contact == "" {
+			return
+		}
+
+		b.quartermasterContact = contact
+	})
+
+	return b.quartermasterContact
 }
 
 func firstPhotoURL(photoURLs []string) string {
