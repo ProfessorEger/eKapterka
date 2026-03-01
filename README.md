@@ -14,6 +14,7 @@ eKapterka is a Telegram bot for browsing and managing outdoor gear inventory, wi
 - [Configuration](#configuration)
 - [Quick Start](#quick-start)
 - [Running with Docker](#running-with-docker)
+- [Deploy to Google Cloud Run (from scratch)](#deploy-to-google-cloud-run-from-scratch)
 - [Bot Commands](#bot-commands)
 - [Data Model (Firestore)](#data-model-firestore)
 - [Testing](#testing)
@@ -126,6 +127,147 @@ docker run --rm -p 8080:8080 \
   -v /local/path/gcp.json:/secrets/gcp.json:ro \
   ekapterka-bot
 ```
+
+## Deploy to Google Cloud Run (from scratch)
+
+This section uses anonymized placeholders. Replace values in `<...>` with your own.
+
+### 1. Prepare local variables
+
+```bash
+export PROJECT_ID="<your-gcp-project-id>"
+export REGION="<your-region>"               # e.g. europe-west1
+export REPO_DIR="<absolute-path-to-repo>"   # e.g. /home/user/eKapterka
+export SERVICE_NAME="tg-bot"
+export WEBHOOK_PATH="/webhook"
+export BUCKET_NAME="<unique-bucket-name>"   # must be globally unique
+export ADMIN_CODE="<strong-admin-code>"
+```
+
+### 2. Authenticate and select project
+
+```bash
+gcloud auth login
+gcloud config set project "$PROJECT_ID"
+```
+
+If needed, link billing to the project before continuing.
+
+### 3. Enable required APIs
+
+```bash
+gcloud services enable \
+  run.googleapis.com \
+  cloudbuild.googleapis.com \
+  artifactregistry.googleapis.com \
+  firestore.googleapis.com \
+  storage.googleapis.com \
+  secretmanager.googleapis.com
+```
+
+### 4. Create Firestore database (if not created yet)
+
+```bash
+gcloud firestore databases create \
+  --location="$REGION" \
+  --type=firestore-native
+```
+
+If Firestore already exists, this command will fail and you can skip this step.
+
+### 5. Create a bucket for item photos
+
+```bash
+gcloud storage buckets create "gs://$BUCKET_NAME" \
+  --location="$REGION" \
+  --uniform-bucket-level-access
+```
+
+### 6. Store sensitive values in Secret Manager
+
+```bash
+printf "%s" "<telegram-bot-token>" | \
+  gcloud secrets create bot-token --data-file=- 2>/dev/null || \
+  printf "%s" "<telegram-bot-token>" | gcloud secrets versions add bot-token --data-file=-
+
+printf "%s" "$ADMIN_CODE" | \
+  gcloud secrets create admin-code --data-file=- 2>/dev/null || \
+  printf "%s" "$ADMIN_CODE" | gcloud secrets versions add admin-code --data-file=-
+```
+
+### 7. Grant runtime access to secrets and storage
+
+Use the Cloud Run service account (by default this is usually `<project-number>-compute@developer.gserviceaccount.com` unless you configured a custom one):
+
+```bash
+export PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+export RUNTIME_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:$RUNTIME_SA" \
+  --role="roles/secretmanager.secretAccessor"
+
+gcloud storage buckets add-iam-policy-binding "gs://$BUCKET_NAME" \
+  --member="serviceAccount:$RUNTIME_SA" \
+  --role="roles/storage.objectAdmin"
+```
+
+### 8. Deploy the service (first pass)
+
+Deploy from source in `ekapterka` directory:
+
+```bash
+cd "$REPO_DIR/ekapterka"
+
+gcloud run deploy "$SERVICE_NAME" \
+  --source . \
+  --region "$REGION" \
+  --allow-unauthenticated \
+  --set-env-vars "WEBHOOK_PATH=$WEBHOOK_PATH,STORAGE_ID=$BUCKET_NAME" \
+  --set-secrets "BOT_TOKEN=bot-token:latest,ADMIN_CODE=admin-code:latest"
+```
+
+### 9. Get Cloud Run URL and set `SERVICE_URL`
+
+```bash
+export SERVICE_URL="$(gcloud run services describe "$SERVICE_NAME" \
+  --region "$REGION" \
+  --format='value(status.url)')"
+```
+
+Update service env so bot can self-register Telegram webhook on startup:
+
+```bash
+gcloud run services update "$SERVICE_NAME" \
+  --region "$REGION" \
+  --update-env-vars "SERVICE_URL=$SERVICE_URL"
+```
+
+### 10. Seed categories once
+
+Because Firestore category tree is required for navigation, run the seed command once with project credentials:
+
+```bash
+cd "$REPO_DIR/ekapterka"
+go run ./cmd/seed
+```
+
+### 11. Verify deployment
+
+```bash
+gcloud run services describe "$SERVICE_NAME" \
+  --region "$REGION" \
+  --format='value(status.url)'
+```
+
+Open the bot in Telegram and run `/start`.
+
+Notes:
+
+- In this codebase, Firestore project ID is hardcoded as `e-kapterka` in `internal/repository/client.go` and `cmd/seed/main.go`.  
+  If your GCP project ID is different, update those files before deploy.
+- `SERVICE_URL` is required for automatic webhook registration inside the bot startup flow.
+- For production, prefer a dedicated service account instead of the default compute service account.
 
 ## Bot Commands
 
