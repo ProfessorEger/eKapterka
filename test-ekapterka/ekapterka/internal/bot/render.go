@@ -82,30 +82,42 @@ func renderItemsKeyboard(items []models.Item, categoryID string, page int, hasNe
 }
 
 func (b *Bot) displayMessage(chatID int64, messageID *int, text string, kb *tgbotapi.InlineKeyboardMarkup) {
+	b.displayMessageWithParseMode(chatID, messageID, text, kb, "")
+}
+
+func (b *Bot) displayMessageWithParseMode(chatID int64, messageID *int, text string, kb *tgbotapi.InlineKeyboardMarkup, parseMode string) {
 	if messageID == nil {
 		msg := tgbotapi.NewMessage(chatID, text)
 		msg.ReplyMarkup = kb
+		msg.ParseMode = parseMode
 		b.api.Send(msg)
 		return
 	}
 
 	edit := tgbotapi.NewEditMessageText(chatID, *messageID, text)
 	edit.ReplyMarkup = kb
+	edit.ParseMode = parseMode
 	if _, err := b.api.Send(edit); err == nil {
 		return
 	}
 
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ReplyMarkup = kb
+	msg.ParseMode = parseMode
 	if _, err := b.api.Send(msg); err == nil {
 		b.deleteMessage(chatID, *messageID)
 	}
 }
 
 func (b *Bot) displayPhotoMessage(chatID int64, messageID *int, photoURL, caption string, kb *tgbotapi.InlineKeyboardMarkup) {
+	b.displayPhotoMessageWithParseMode(chatID, messageID, photoURL, caption, kb, "")
+}
+
+func (b *Bot) displayPhotoMessageWithParseMode(chatID int64, messageID *int, photoURL, caption string, kb *tgbotapi.InlineKeyboardMarkup, parseMode string) {
 	if messageID != nil {
 		media := tgbotapi.NewInputMediaPhoto(tgbotapi.FileURL(photoURL))
 		media.Caption = truncateTelegramCaption(caption)
+		media.ParseMode = parseMode
 
 		edit := tgbotapi.EditMessageMediaConfig{
 			BaseEdit: tgbotapi.BaseEdit{
@@ -122,6 +134,7 @@ func (b *Bot) displayPhotoMessage(chatID int64, messageID *int, photoURL, captio
 
 	msg := tgbotapi.NewPhoto(chatID, tgbotapi.FileURL(photoURL))
 	msg.Caption = truncateTelegramCaption(caption)
+	msg.ParseMode = parseMode
 	msg.ReplyMarkup = kb
 	if _, err := b.api.Send(msg); err == nil && messageID != nil {
 		b.deleteMessage(chatID, *messageID)

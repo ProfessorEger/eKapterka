@@ -3,6 +3,7 @@ package bot
 import (
 	"errors"
 	"fmt"
+	"html"
 	"log"
 	"net/http"
 	"net/url"
@@ -28,6 +29,10 @@ func (b *Bot) handleCommand(update *tgbotapi.Update) {
 		b.handleAddCommand(update)
 	case "edit":
 		b.handleEditCommand(update)
+	case "cat":
+		b.handleLeafCategoriesCommand(update)
+	case "rm":
+		b.handleDeleteCommand(update)
 	case "getadmin":
 		b.handleGetAdminCommand(update)
 	default:
@@ -109,14 +114,14 @@ func (b *Bot) handleAddCommand(update *tgbotapi.Update) {
 	if len(lines) < 4 {
 		msg := tgbotapi.NewMessage(
 			chatID,
-			"❌ Неверный формат.\n\nИспользуй:\n/add\nНазвание\nКатегорияID\nОписание",
+			"❌ Неверный формат.\n\nИспользуй:\n/add\nКатегорияID\nНазвание\nОписание",
 		)
 		b.api.Send(msg)
 		return
 	}
 
-	title := strings.TrimSpace(lines[1])
-	categoryID := strings.TrimSpace(lines[2])
+	categoryID := strings.TrimSpace(lines[1])
+	title := strings.TrimSpace(lines[2])
 	description := strings.TrimSpace(lines[3])
 
 	if title == "" || categoryID == "" {
@@ -152,7 +157,36 @@ func (b *Bot) handleAddCommand(update *tgbotapi.Update) {
 	b.api.Send(msg)
 }
 
-//TODO: команда для админа. вывести список категорий в которых можно добавлять предметы (LEAF категории)
+func (b *Bot) handleLeafCategoriesCommand(update *tgbotapi.Update) {
+	if !b.requireAdmin(update) {
+		return
+	}
+
+	categories, err := b.repo.GetLeafCategories(b.ctx)
+	if err != nil {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "❌ Ошибка загрузки категорий")
+		b.api.Send(msg)
+		return
+	}
+	if len(categories) == 0 {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "LEAF категории не найдены")
+		b.api.Send(msg)
+		return
+	}
+
+	var sb strings.Builder
+	for _, cat := range categories {
+		title := cat.Title
+		if strings.TrimSpace(title) == "" && len(cat.Path) > 0 {
+			title = cat.Path[len(cat.Path)-1]
+		}
+		sb.WriteString(fmt.Sprintf("<code>%s</code> %s\n", html.EscapeString(cat.ID), html.EscapeString(title)))
+	}
+
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, sb.String())
+	msg.ParseMode = tgbotapi.ModeHTML
+	b.api.Send(msg)
+}
 
 func (b *Bot) handleEditCommand(update *tgbotapi.Update) {
 	if !b.requireAdmin(update) {
@@ -169,7 +203,7 @@ func (b *Bot) handleEditCommand(update *tgbotapi.Update) {
 	if len(lines) < 4 {
 		msg := tgbotapi.NewMessage(
 			chatID,
-			"❌ Неверный формат.\n\nИспользуй:\n/edit <id>\nНовое название\nНовая категория\nНовое описание",
+			"❌ Неверный формат.\n\nИспользуй:\n/edit <id>\nНовая категория\nНовое название\nНовое описание",
 		)
 		b.api.Send(msg)
 		return
@@ -183,8 +217,8 @@ func (b *Bot) handleEditCommand(update *tgbotapi.Update) {
 	}
 
 	itemID := strings.TrimSpace(headFields[1])
-	title := strings.TrimSpace(lines[1])
-	categoryID := strings.TrimSpace(lines[2])
+	categoryID := strings.TrimSpace(lines[1])
+	title := strings.TrimSpace(lines[2])
 	description := strings.TrimSpace(lines[3])
 
 	if itemID == "" || title == "" || categoryID == "" {
@@ -231,7 +265,54 @@ func (b *Bot) handleEditCommand(update *tgbotapi.Update) {
 	b.api.Send(msg)
 }
 
-//TODO: команда для админа. удалить предмет (по id). формат команды: /delete <id>. При этом удалить фото из хранилища
+func (b *Bot) handleDeleteCommand(update *tgbotapi.Update) {
+	if !b.requireAdmin(update) {
+		return
+	}
+
+	chatID := update.Message.Chat.ID
+	itemID := strings.TrimSpace(update.Message.CommandArguments())
+	if itemID == "" {
+		text := strings.TrimSpace(update.Message.Text)
+		if text == "" {
+			text = strings.TrimSpace(update.Message.Caption)
+		}
+		firstLine := strings.Split(text, "\n")[0]
+		fields := strings.Fields(firstLine)
+		if len(fields) > 1 {
+			itemID = strings.TrimSpace(fields[1])
+		}
+	}
+
+	if itemID == "" {
+		msg := tgbotapi.NewMessage(chatID, "❌ Укажите ID: /delete <id>")
+		b.api.Send(msg)
+		return
+	}
+
+	item, err := b.repo.GetItemByID(b.ctx, itemID)
+	if err != nil {
+		msg := tgbotapi.NewMessage(chatID, "❌ Предмет не найден")
+		b.api.Send(msg)
+		return
+	}
+
+	if err := b.repo.DeleteItemByID(b.ctx, itemID); err != nil {
+		msg := tgbotapi.NewMessage(chatID, "❌ Ошибка при удалении предмета")
+		b.api.Send(msg)
+		return
+	}
+
+	if err := b.deleteItemPhotos(item.PhotoURLs); err != nil {
+		log.Printf("delete photos for item %s failed: %v", itemID, err)
+		msg := tgbotapi.NewMessage(chatID, "⚠️ Предмет удален, но фото удалить не удалось")
+		b.api.Send(msg)
+		return
+	}
+
+	msg := tgbotapi.NewMessage(chatID, "✅ Предмет успешно удален")
+	b.api.Send(msg)
+}
 
 func (b *Bot) requireAdmin(update *tgbotapi.Update) bool {
 	if update == nil || update.Message == nil {
@@ -243,20 +324,28 @@ func (b *Bot) requireAdmin(update *tgbotapi.Update) bool {
 		userID = update.Message.From.ID
 	}
 
-	role, err := b.repo.GetUserRole(b.ctx, userID)
+	isAdmin, err := b.isAdminUser(userID)
 	if err != nil {
 		log.Printf("get user role failed for user %d: %v", userID, err)
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "❌ Не удалось проверить права доступа")
 		b.api.Send(msg)
 		return false
 	}
-	if role != models.ADMIN {
+	if !isAdmin {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "⛔ Команда доступна только администратору")
 		b.api.Send(msg)
 		return false
 	}
 
 	return true
+}
+
+func (b *Bot) isAdminUser(userID int64) (bool, error) {
+	role, err := b.repo.GetUserRole(b.ctx, userID)
+	if err != nil {
+		return false, err
+	}
+	return role == models.ADMIN, nil
 }
 
 func (b *Bot) uploadMessagePhotos(msg *tgbotapi.Message) ([]string, error) {

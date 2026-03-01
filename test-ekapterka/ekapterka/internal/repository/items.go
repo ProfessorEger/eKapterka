@@ -156,3 +156,8 @@ func (c *Client) UpdateItem(
 	})
 	return err
 }
+
+func (c *Client) DeleteItemByID(ctx context.Context, id string) error {
+	_, err := c.db.Collection("items").Doc(id).Delete(ctx)
+	return err
+}

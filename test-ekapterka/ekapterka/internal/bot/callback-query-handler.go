@@ -2,6 +2,8 @@ package bot
 
 import (
 	"ekapterka/internal/models"
+	"html"
+	"log"
 	"strconv"
 	"strings"
 
@@ -193,7 +195,15 @@ func (b *Bot) handleItemSelect(cb *tgbotapi.CallbackQuery, payload string) {
 		return
 	}
 
-	text := item.Title + "\n" + item.Description
+	isAdmin := false
+	if cb.From != nil {
+		isAdmin, err = b.isAdminUser(cb.From.ID)
+		if err != nil {
+			log.Printf("resolve role for user %d failed: %v", cb.From.ID, err)
+		}
+	}
+
+	text, parseMode := renderItemCardText(item, isAdmin)
 
 	kb := &tgbotapi.InlineKeyboardMarkup{
 		InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{
@@ -203,21 +213,43 @@ func (b *Bot) handleItemSelect(cb *tgbotapi.CallbackQuery, payload string) {
 					"search:items:"+item.CategoryID+":"+strconv.Itoa(page),
 				),
 			},
+			{
+				tgbotapi.NewInlineKeyboardButtonData("🏠 В главное меню", "menu:main"),
+			},
 		},
 	}
 
 	if photoURL := firstPhotoURL(item.PhotoURLs); photoURL != "" {
-		b.displayPhotoMessage(
+		b.displayPhotoMessageWithParseMode(
 			cb.Message.Chat.ID,
 			&cb.Message.MessageID,
 			photoURL,
 			text,
 			kb,
+			parseMode,
 		)
 		return
 	}
 
-	b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, text, kb)
+	b.displayMessageWithParseMode(cb.Message.Chat.ID, &cb.Message.MessageID, text, kb, parseMode)
+}
+
+func renderItemCardText(item *models.Item, isAdmin bool) (string, string) {
+	lines := []string{
+		"<code>" + html.EscapeString(item.ID) + "</code>",
+	}
+	if isAdmin {
+		lines = append(lines, "<code>"+html.EscapeString(item.CategoryID)+"</code>")
+	}
+
+	lines = append(lines, html.EscapeString(item.Title))
+	if desc := strings.TrimSpace(item.Description); desc != "" {
+		lines = append(lines, html.EscapeString(desc))
+	}
+
+	lines = append(lines, "\nДля того чтобы арендовать, пишите каптерщику @ProfessorEger")
+
+	return strings.Join(lines, "\n"), tgbotapi.ModeHTML
 }
 
 func firstPhotoURL(photoURLs []string) string {
