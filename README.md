@@ -3,12 +3,15 @@
 [![Go Version](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
+Language: English | [Русский](./README.ru.md)
+
 eKapterka is a Telegram bot for browsing and managing outdoor gear inventory, with item data stored in Google Firestore and photos stored in Google Cloud Storage.
 
 ## Table of Contents
 
 - [Features](#features)
 - [Tech Stack](#tech-stack)
+- [Detailed Documentation](#detailed-documentation)
 - [Project Structure](#project-structure)
 - [Requirements](#requirements)
 - [Configuration](#configuration)
@@ -37,6 +40,17 @@ eKapterka is a Telegram bot for browsing and managing outdoor gear inventory, wi
 - Google Firestore
 - Google Cloud Storage
 - Docker (multi-stage build, distroless runtime)
+
+## Detailed Documentation
+
+For full technical documentation, see the [`docs/`](./docs) directory:
+
+- [`docs/architecture.md`](./docs/architecture.md)
+- [`docs/data-model.md`](./docs/data-model.md)
+- [`docs/deployment.md`](./docs/deployment.md)
+- [`docs/bot-flows.md`](./docs/bot-flows.md)
+- [`docs/operations.md`](./docs/operations.md)
+- [`docs/development.md`](./docs/development.md)
 
 ## Project Structure
 
