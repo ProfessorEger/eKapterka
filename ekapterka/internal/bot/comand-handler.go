@@ -130,7 +130,7 @@ func (b *Bot) handleAddCommand(update *tgbotapi.Update) {
 
 	categoryID := strings.TrimSpace(lines[1])
 	title := strings.TrimSpace(lines[2])
-	description := strings.TrimSpace(lines[3])
+	description := strings.TrimSpace(strings.Join(lines[3:], "\n"))
 
 	if title == "" || categoryID == "" {
 		msg := tgbotapi.NewMessage(chatID, "❌ Название и категория обязательны")
@@ -226,7 +226,7 @@ func (b *Bot) handleEditCommand(update *tgbotapi.Update) {
 	itemID := strings.TrimSpace(headFields[1])
 	categoryID := strings.TrimSpace(lines[1])
 	title := strings.TrimSpace(lines[2])
-	description := strings.TrimSpace(lines[3])
+	description := strings.TrimSpace(strings.Join(lines[3:], "\n"))
 
 	if itemID == "" || title == "" || categoryID == "" {
 		msg := tgbotapi.NewMessage(chatID, "❌ ID, название и категория обязательны")
