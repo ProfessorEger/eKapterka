@@ -1,4 +1,8 @@
+// Package storage содержит адаптеры файлового хранилища.
+// Текущая реализация работает с Google Cloud Storage.
 package storage
+
+// Файл реализует GCS-клиент: загрузку/удаление объектов и формирование public URL.
 
 import (
 	"context"
@@ -11,17 +15,21 @@ import (
 	"cloud.google.com/go/storage"
 )
 
+// Storage — минимальный контракт для работы с файловым хранилищем.
+// Нужен, чтобы изолировать bot-логику от конкретной реализации GCS.
 type Storage interface {
 	Upload(ctx context.Context, objectPath string, r io.Reader, contentType string) error
 	Delete(ctx context.Context, objectPath string) error
 	PublicURL(objectPath string) string
 }
 
+// GCS — реализация Storage поверх Google Cloud Storage.
 type GCS struct {
 	client     *storage.Client
 	bucketName string
 }
 
+// NewGCS создает клиент GCS для заданного bucket.
 func NewGCS(ctx context.Context, bucketName string) *GCS {
 	client, err := storage.NewClient(ctx)
 	if err != nil {
@@ -34,6 +42,7 @@ func NewGCS(ctx context.Context, bucketName string) *GCS {
 	}
 }
 
+// Upload загружает объект в bucket по указанному пути.
 func (g *GCS) Upload(ctx context.Context, objectPath string, r io.Reader, contentType string) error {
 	objectPath = cleanPath(objectPath)
 
@@ -56,6 +65,7 @@ func (g *GCS) Upload(ctx context.Context, objectPath string, r io.Reader, conten
 	return nil
 }
 
+// Delete удаляет объект из bucket.
 func (g *GCS) Delete(ctx context.Context, objectPath string) error {
 	objectPath = cleanPath(objectPath)
 
@@ -71,6 +81,7 @@ func (g *GCS) Delete(ctx context.Context, objectPath string) error {
 	return nil
 }
 
+// PublicURL возвращает публичный URL объекта в стандартном формате GCS.
 func (g *GCS) PublicURL(objectPath string) string {
 	objectPath = cleanPath(objectPath)
 	return fmt.Sprintf(
@@ -80,6 +91,7 @@ func (g *GCS) PublicURL(objectPath string) string {
 	)
 }
 
+// cleanPath нормализует путь объекта (убирает лишние префиксы/пробелы).
 func cleanPath(p string) string {
 	p = strings.TrimSpace(p)
 	p = strings.TrimPrefix(p, "/")

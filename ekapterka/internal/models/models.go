@@ -1,11 +1,19 @@
+// Package models определяет доменные сущности и shared-константы проекта.
+// Эти структуры используются в bot/repository/seed слоях.
 package models
+
+// Файл содержит модели: Category, Item, Rental, UserState.
 
 import "time"
 
+// RootParentID — служебный идентификатор "виртуального" корня дерева категорий.
 const RootParentID = "root"
+
+// Константы ролей пользователя в системе.
 const ADMIN = "admin"
 const USER = "user"
 
+// Category описывает узел дерева категорий снаряжения/инвентаря.
 type Category struct {
 	ID       string   `firestore:"id"`
 	Title    string   `firestore:"title"`
@@ -16,12 +24,15 @@ type Category struct {
 	IsLeaf   bool     `firestore:"is_leaf"`
 }
 
+// Rental — период аренды конкретного предмета.
 type Rental struct {
 	Start       time.Time `firestore:"start"`
 	End         time.Time `firestore:"end"`
 	Description string    `firestore:"description"`
 }
 
+// Item — карточка предмета в каталоге.
+// ID хранится как Firestore document ID и не сериализуется в поле документа.
 type Item struct {
 	ID          string    `firestore:"-"`
 	Title       string    `firestore:"title"`
@@ -34,6 +45,7 @@ type Item struct {
 	Rentals     []Rental  `firestore:"rentals"`
 }
 
+// UserState хранит минимальное состояние пользователя для авторизации и UX.
 type UserState struct {
 	UserID    int64     `firestore:"id"`
 	Role      string    `firestore:"role"`

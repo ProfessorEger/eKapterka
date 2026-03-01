@@ -1,5 +1,8 @@
 package bot
 
+// Файл содержит обработчики slash-команд (/start, /add, /edit, /rent и т.д.),
+// включая проверки ролей, парсинг пользовательского ввода и вызовы repository/storage.
+
 import (
 	"errors"
 	"fmt"
@@ -18,6 +21,8 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+// handleCommand роутит slash-команды в соответствующие обработчики.
+// Команда может прийти как в тексте, так и в caption (для сообщений с фото).
 func (b *Bot) handleCommand(update *tgbotapi.Update) {
 	command := update.Message.Command()
 	if command == "" {
@@ -48,6 +53,7 @@ func (b *Bot) handleCommand(update *tgbotapi.Update) {
 	}
 }
 
+// handleStartCommand инициализирует пользователя и показывает главное меню.
 func (b *Bot) handleStartCommand(msg *tgbotapi.Message) {
 	if msg == nil {
 		return
@@ -66,6 +72,7 @@ func (b *Bot) handleStartCommand(msg *tgbotapi.Message) {
 	b.displayMessage(msg.Chat.ID, nil, text, kb)
 }
 
+// handleGetAdminCommand повышает роль пользователя до admin при корректном коде.
 func (b *Bot) handleGetAdminCommand(update *tgbotapi.Update) {
 	if update == nil || update.Message == nil {
 		return
@@ -107,6 +114,8 @@ func (b *Bot) handleGetAdminCommand(update *tgbotapi.Update) {
 
 }
 
+// handleAddCommand создает новый предмет.
+// Формат поддерживает многострочное описание и опциональное фото.
 func (b *Bot) handleAddCommand(update *tgbotapi.Update) {
 	if !b.requireAdmin(update) {
 		return
@@ -164,6 +173,7 @@ func (b *Bot) handleAddCommand(update *tgbotapi.Update) {
 	b.api.Send(msg)
 }
 
+// handleLeafCategoriesCommand выводит список листовых категорий для админских команд.
 func (b *Bot) handleLeafCategoriesCommand(update *tgbotapi.Update) {
 	if !b.requireAdmin(update) {
 		return
@@ -195,6 +205,8 @@ func (b *Bot) handleLeafCategoriesCommand(update *tgbotapi.Update) {
 	b.api.Send(msg)
 }
 
+// handleEditCommand редактирует существующий предмет.
+// При наличии нового фото старые ссылки заменяются, старые объекты удаляются.
 func (b *Bot) handleEditCommand(update *tgbotapi.Update) {
 	if !b.requireAdmin(update) {
 		return
@@ -272,6 +284,8 @@ func (b *Bot) handleEditCommand(update *tgbotapi.Update) {
 	b.api.Send(msg)
 }
 
+// handleDeleteCommand удаляет предмет и связанные фото из GCS.
+// ID может быть передан аргументом команды или в первой строке caption/text.
 func (b *Bot) handleDeleteCommand(update *tgbotapi.Update) {
 	if !b.requireAdmin(update) {
 		return
@@ -321,6 +335,8 @@ func (b *Bot) handleDeleteCommand(update *tgbotapi.Update) {
 	b.api.Send(msg)
 }
 
+// handleRentCommand добавляет период аренды к предмету.
+// Даты принимаются в формате DD.MM.YYYY.
 func (b *Bot) handleRentCommand(update *tgbotapi.Update) {
 	if !b.requireAdmin(update) {
 		return
@@ -400,6 +416,7 @@ func (b *Bot) handleRentCommand(update *tgbotapi.Update) {
 	b.api.Send(msg)
 }
 
+// handleUnrentCommand удаляет аренду по 1-based номеру из отсортированного списка.
 func (b *Bot) handleUnrentCommand(update *tgbotapi.Update) {
 	if !b.requireAdmin(update) {
 		return
@@ -470,6 +487,7 @@ func (b *Bot) handleUnrentCommand(update *tgbotapi.Update) {
 	b.api.Send(msg)
 }
 
+// handleCommandsCommand показывает список доступных команд для текущей роли.
 func (b *Bot) handleCommandsCommand(update *tgbotapi.Update) {
 	if update == nil || update.Message == nil {
 		return
@@ -505,6 +523,8 @@ func (b *Bot) handleCommandsCommand(update *tgbotapi.Update) {
 	b.api.Send(msg)
 }
 
+// requireAdmin проверяет роль пользователя и отправляет сообщение об ошибке,
+// если команда недоступна по правам.
 func (b *Bot) requireAdmin(update *tgbotapi.Update) bool {
 	if update == nil || update.Message == nil {
 		return false
@@ -531,6 +551,7 @@ func (b *Bot) requireAdmin(update *tgbotapi.Update) bool {
 	return true
 }
 
+// isAdminUser возвращает true, если роль пользователя — admin.
 func (b *Bot) isAdminUser(userID int64) (bool, error) {
 	role, err := b.repo.GetUserRole(b.ctx, userID)
 	if err != nil {
@@ -539,6 +560,8 @@ func (b *Bot) isAdminUser(userID int64) (bool, error) {
 	return role == models.ADMIN, nil
 }
 
+// uploadMessagePhotos загружает самое большое фото из Telegram в GCS.
+// Возвращает публичный URL загруженного объекта.
 func (b *Bot) uploadMessagePhotos(msg *tgbotapi.Message) ([]string, error) {
 	if msg == nil || len(msg.Photo) == 0 {
 		return []string{}, nil
@@ -585,6 +608,7 @@ func (b *Bot) uploadMessagePhotos(msg *tgbotapi.Message) ([]string, error) {
 	return []string{b.gcs.PublicURL(objectPath)}, nil
 }
 
+// deleteItemPhotos удаляет набор фото по их публичным URL.
 func (b *Bot) deleteItemPhotos(photoURLs []string) error {
 	if b.gcs == nil {
 		return fmt.Errorf("gcs is not configured")
@@ -608,6 +632,7 @@ func (b *Bot) deleteItemPhotos(photoURLs []string) error {
 	return nil
 }
 
+// gcsObjectPathFromPublicURL извлекает путь объекта из поддерживаемых форматов GCS URL.
 func gcsObjectPathFromPublicURL(raw string) string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -635,6 +660,8 @@ func gcsObjectPathFromPublicURL(raw string) string {
 	return ""
 }
 
+// extractCommandFromCaption достает slash-команду из caption entities.
+// Нужно для сценариев, где команда отправляется вместе с фото.
 func extractCommandFromCaption(msg *tgbotapi.Message) string {
 	if msg == nil {
 		return ""
@@ -660,6 +687,7 @@ func extractCommandFromCaption(msg *tgbotapi.Message) string {
 	return ""
 }
 
+// resolveImageExt определяет расширение файла по Content-Type ответа Telegram.
 func resolveImageExt(contentType string) string {
 	switch strings.TrimSpace(strings.ToLower(contentType)) {
 	case "image/png":

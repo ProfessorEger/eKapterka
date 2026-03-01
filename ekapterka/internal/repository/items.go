@@ -1,5 +1,8 @@
 package repository
 
+// Файл содержит операции работы с предметами:
+// создание, чтение, редактирование, удаление и управление периодами аренды.
+
 import (
 	"context"
 	"log"
@@ -11,6 +14,8 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+// itemFromDoc преобразует Firestore документ в доменную модель Item.
+// Здесь также поддерживается обратная совместимость по полю rental_periods.
 func itemFromDoc(doc *firestore.DocumentSnapshot) models.Item {
 	data := doc.Data()
 	item := models.Item{
@@ -86,6 +91,7 @@ func itemFromDoc(doc *firestore.DocumentSnapshot) models.Item {
 	return item
 }
 
+// AddItem создает новый предмет с автоматическими created_at/updated_at.
 func (c *Client) AddItem(ctx context.Context, item models.Item) error {
 	now := time.Now()
 	item.CreatedAt = now
@@ -95,6 +101,10 @@ func (c *Client) AddItem(ctx context.Context, item models.Item) error {
 	return err
 }
 
+// GetItemsByCategoryPage возвращает страницу предметов категории.
+// Для определения hasNext используется выборка limit+1.
+// Если запрос с сортировкой не проходит (например, из-за индекса),
+// применяется fallback-запрос без OrderBy.
 func (c *Client) GetItemsByCategoryPage(ctx context.Context, categoryID string, page, limit int) ([]models.Item, bool, error) {
 	if page < 0 {
 		page = 0
@@ -126,6 +136,7 @@ func (c *Client) GetItemsByCategoryPage(ctx context.Context, categoryID string, 
 	return c.readItemsQuery(ctx, fallbackQ, limit)
 }
 
+// readItemsQuery исполняет Firestore query и вычисляет флаг следующей страницы.
 func (c *Client) readItemsQuery(ctx context.Context, q firestore.Query, limit int) ([]models.Item, bool, error) {
 	iter := q.Documents(ctx)
 	defer iter.Stop()
@@ -152,6 +163,7 @@ func (c *Client) readItemsQuery(ctx context.Context, q firestore.Query, limit in
 	return items, hasNext, nil
 }
 
+// GetItemByID возвращает предмет по document ID.
 func (c *Client) GetItemByID(ctx context.Context, id string) (*models.Item, error) {
 	doc, err := c.db.Collection("items").Doc(id).Get(ctx)
 	if err != nil {
@@ -163,6 +175,7 @@ func (c *Client) GetItemByID(ctx context.Context, id string) (*models.Item, erro
 	return &item, nil
 }
 
+// UpdateItem обновляет базовые поля предмета и время обновления.
 func (c *Client) UpdateItem(
 	ctx context.Context,
 	id string,
@@ -181,11 +194,13 @@ func (c *Client) UpdateItem(
 	return err
 }
 
+// DeleteItemByID удаляет документ предмета по ID.
 func (c *Client) DeleteItemByID(ctx context.Context, id string) error {
 	_, err := c.db.Collection("items").Doc(id).Delete(ctx)
 	return err
 }
 
+// AddRentalPeriodToItem добавляет период аренды в массив rentals.
 func (c *Client) AddRentalPeriodToItem(ctx context.Context, id string, period models.Rental) error {
 	_, err := c.db.Collection("items").Doc(id).Update(ctx, []firestore.Update{
 		{Path: "rentals", Value: firestore.ArrayUnion(period)},
@@ -194,6 +209,8 @@ func (c *Client) AddRentalPeriodToItem(ctx context.Context, id string, period mo
 	return err
 }
 
+// UpdateItemRentals полностью перезаписывает массив rentals.
+// Используется, например, при удалении аренды по номеру.
 func (c *Client) UpdateItemRentals(ctx context.Context, id string, rentals []models.Rental) error {
 	_, err := c.db.Collection("items").Doc(id).Update(ctx, []firestore.Update{
 		{Path: "rentals", Value: rentals},

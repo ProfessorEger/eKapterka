@@ -1,13 +1,22 @@
 package seed
 
+// Файл содержит фиксированный каталог категорий для сидирования.
+// Это "источник истины" для структуры дерева категорий в Firestore.
+
 import (
 	"ekapterka/internal/models"
 )
 
+// strPtr удобен для краткой инициализации parent_id в seed-структурах.
 func strPtr(s string) *string {
 	return &s
 }
 
+// Categories — эталонное дерево категорий каталога.
+// Важно:
+// - ID должен быть стабильным (используется в командах /add, /edit и callback payload).
+// - Path хранит путь из ID, а не из человекочитаемых Title.
+// - Для корневых узлов ParentID = models.RootParentID.
 var Categories = []models.Category{
 	// ===== Снаряжение =====
 	{

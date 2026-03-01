@@ -1,5 +1,8 @@
 package repository
 
+// Файл содержит операции управления состоянием пользователя:
+// автосоздание user-state, чтение роли и изменение роли.
+
 import (
 	"context"
 	"strconv"
@@ -14,6 +17,8 @@ import (
 
 const usersCollection = "users"
 
+// EnsureUserState гарантирует существование user-документа.
+// Если пользователь встречается впервые, создается запись с ролью USER.
 func (c *Client) EnsureUserState(ctx context.Context, userID int64) error {
 	docID := strconv.FormatInt(userID, 10)
 	docRef := c.db.Collection(usersCollection).Doc(docID)
@@ -41,6 +46,8 @@ func (c *Client) EnsureUserState(ctx context.Context, userID int64) error {
 	return err
 }
 
+// SetUserRole устанавливает роль пользователя.
+// Если документа нет, сначала создается базовое состояние.
 func (c *Client) SetUserRole(ctx context.Context, userID int64, role string) error {
 	docID := strconv.FormatInt(userID, 10)
 	docRef := c.db.Collection(usersCollection).Doc(docID)
@@ -65,6 +72,8 @@ func (c *Client) SetUserRole(ctx context.Context, userID int64, role string) err
 	return err
 }
 
+// GetUserRole возвращает роль пользователя.
+// При отсутствии документа создается состояние по умолчанию (role=user).
 func (c *Client) GetUserRole(ctx context.Context, userID int64) (string, error) {
 	docID := strconv.FormatInt(userID, 10)
 	docRef := c.db.Collection(usersCollection).Doc(docID)

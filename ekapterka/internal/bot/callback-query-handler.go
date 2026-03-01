@@ -1,5 +1,8 @@
 package bot
 
+// Файл реализует обработку callback_query от inline-кнопок:
+// навигацию по категориям, пагинацию предметов и рендер карточек товаров.
+
 import (
 	"ekapterka/internal/models"
 	"encoding/json"
@@ -12,6 +15,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+// handleCallbackQuery роутит inline callback-события меню и каталога.
 func (b *Bot) handleCallbackQuery(update *tgbotapi.Update) {
 	cb := update.CallbackQuery
 	if cb == nil {
@@ -20,11 +24,9 @@ func (b *Bot) handleCallbackQuery(update *tgbotapi.Update) {
 
 	b.api.Request(tgbotapi.NewCallback(cb.ID, ""))
 
-	//b.removeInlineKeyboard(cb.Message.Chat.ID, cb.Message.MessageID)
-
 	switch {
 	case cb.Data == "menu:main":
-		b.handleMenuMainCallback(cb) // или handleMenuMainCallback (отдельная функция)
+		b.handleMenuMainCallback(cb)
 	case cb.Data == "menu:find":
 		b.handleMenuFindCallback(cb)
 	case cb.Data == "menu:profile":
@@ -41,15 +43,18 @@ func (b *Bot) handleCallbackQuery(update *tgbotapi.Update) {
 	}
 }
 
+// handleMenuMainCallback возвращает пользователя в главное меню.
 func (b *Bot) handleMenuMainCallback(cb *tgbotapi.CallbackQuery) {
 	text, kb := renderMainMenu()
 	b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, text, kb)
 }
 
+// strPtr — локальный helper для передачи строковых указателей.
 func strPtr(s string) *string {
 	return &s
 }
 
+// handleMenuFindCallback открывает корневые категории каталога.
 func (b *Bot) handleMenuFindCallback(cb *tgbotapi.CallbackQuery) {
 	categories, err := b.repo.GetChildCategories(b.ctx, strPtr(models.RootParentID))
 	if err != nil {
@@ -66,6 +71,8 @@ func (b *Bot) handleMenuFindCallback(cb *tgbotapi.CallbackQuery) {
 	b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, "Выберите категорию:", kb)
 }
 
+// handleCategorySelect обрабатывает выбор категории:
+// лист -> список предметов, не лист -> подкатегории.
 func (b *Bot) handleCategorySelect(cb *tgbotapi.CallbackQuery, categoryID string) {
 	ctx := b.ctx
 
@@ -104,6 +111,7 @@ func (b *Bot) handleCategorySelect(cb *tgbotapi.CallbackQuery, categoryID string
 	b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, "Выберите подкатегорию:", kb)
 }
 
+// handleItemsPageSelect парсит callback пагинации и открывает нужную страницу.
 func (b *Bot) handleItemsPageSelect(cb *tgbotapi.CallbackQuery, payload string) {
 	parts := strings.Split(payload, ":")
 	if len(parts) != 2 {
@@ -125,6 +133,7 @@ func (b *Bot) handleItemsPageSelect(cb *tgbotapi.CallbackQuery, payload string) 
 	b.showItemsPage(cb, categoryID, page)
 }
 
+// showItemsPage отображает список предметов категории с пагинацией и кнопкой "Назад".
 func (b *Bot) showItemsPage(cb *tgbotapi.CallbackQuery, categoryID string, page int) {
 	backCallback := b.getBackCallbackForCategory(categoryID)
 
@@ -155,6 +164,7 @@ func (b *Bot) showItemsPage(cb *tgbotapi.CallbackQuery, categoryID string, page 
 	b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, "Выберите товар:", kb)
 }
 
+// getBackCallbackForCategory вычисляет, куда должна вести кнопка "Назад" из текущей категории.
 func (b *Bot) getBackCallbackForCategory(categoryID string) string {
 	cat, err := b.repo.GetCategoryByID(b.ctx, categoryID)
 	if err != nil || cat.ParentID == nil {
@@ -168,6 +178,7 @@ func (b *Bot) getBackCallbackForCategory(categoryID string) string {
 	return "search:category:" + *cat.ParentID
 }
 
+// handleItemSelect открывает карточку конкретного предмета.
 func (b *Bot) handleItemSelect(cb *tgbotapi.CallbackQuery, payload string) {
 	parts := strings.Split(payload, ":p:")
 	if len(parts) != 2 {
@@ -236,6 +247,8 @@ func (b *Bot) handleItemSelect(cb *tgbotapi.CallbackQuery, payload string) {
 	b.displayMessageWithParseMode(cb.Message.Chat.ID, &cb.Message.MessageID, text, kb, parseMode)
 }
 
+// renderItemCardText собирает HTML-текст карточки предмета.
+// Для админа дополнительно показываются CategoryID и описания аренд.
 func renderItemCardText(item *models.Item, isAdmin bool, quartermasterContact string) (string, string) {
 	const rentalDateLayout = "02.01.2006"
 
@@ -281,6 +294,8 @@ func renderItemCardText(item *models.Item, isAdmin bool, quartermasterContact st
 	return strings.Join(lines, "\n"), tgbotapi.ModeHTML
 }
 
+// getQuartermasterContact получает контакт каптерщика из описания бота
+// (первое слово) и кэширует результат в памяти процесса.
 func (b *Bot) getQuartermasterContact() string {
 	const fallbackContact = ""
 
@@ -317,6 +332,7 @@ func (b *Bot) getQuartermasterContact() string {
 	return b.quartermasterContact
 }
 
+// firstPhotoURL возвращает первый непустой URL фото.
 func firstPhotoURL(photoURLs []string) string {
 	for _, photoURL := range photoURLs {
 		photoURL = strings.TrimSpace(photoURL)
@@ -327,6 +343,7 @@ func firstPhotoURL(photoURLs []string) string {
 	return ""
 }
 
+// handleMenuProfileCallback — заглушка профиля пользователя.
 func (b *Bot) handleMenuProfileCallback(cb *tgbotapi.CallbackQuery) {
 	b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, "Пустой профиль", &tgbotapi.InlineKeyboardMarkup{
 		InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{

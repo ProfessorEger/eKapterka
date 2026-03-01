@@ -1,3 +1,5 @@
+// Package bot реализует прикладную Telegram-логику:
+// прием и маршрутизация update, обработка команд/callback-ов и рендер UI.
 package bot
 
 import (
@@ -13,6 +15,8 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+// Bot объединяет Telegram API клиент и инфраструктурные зависимости,
+// необходимые для обработки обновлений.
 type Bot struct {
 	api  *tgbotapi.BotAPI
 	repo *repository.Client // или конкретный firestore.Client
@@ -23,6 +27,7 @@ type Bot struct {
 	quartermasterContact     string
 }
 
+// NewBot создает экземпляр бота и валидирует BOT_TOKEN через GetMe внутри SDK.
 func NewBot(token string, client *repository.Client, gcs *storage.GCS, ctx context.Context) *Bot {
 	api, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
@@ -37,6 +42,7 @@ func NewBot(token string, client *repository.Client, gcs *storage.GCS, ctx conte
 	}
 }
 
+// handleUpdate — центральный роутер входящих Telegram updates.
 func (b *Bot) handleUpdate(update *tgbotapi.Update) {
 	if update.CallbackQuery != nil {
 		b.handleCallbackQuery(update)
@@ -53,6 +59,8 @@ func (b *Bot) handleUpdate(update *tgbotapi.Update) {
 	}
 }
 
+// SetupWebhook регистрирует webhook URL в Telegram API.
+// Если SERVICE_URL не задан, шаг пропускается (например, для локальной разработки).
 func (b *Bot) SetupWebhook(webhookPath string) {
 	time.Sleep(5 * time.Second)
 
@@ -80,6 +88,8 @@ func (b *Bot) SetupWebhook(webhookPath string) {
 	log.Println("Webhook set successfully")
 }
 
+// WebhookHandler преобразует входящий HTTP запрос в Telegram update
+// и отправляет update в внутреннюю очередь обработки.
 func (b *Bot) WebhookHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		update, err := b.api.HandleUpdate(r)

@@ -1,5 +1,8 @@
 package bot
 
+// Файл описывает очередь update-ов и worker-модель обработки:
+// прием в buffered channel и последовательный consume воркерами.
+
 import (
 	"log"
 
@@ -8,14 +11,15 @@ import (
 
 var updateQueue chan *tgbotapi.Update
 
-// initQueue ensures the queue is initialized with given size.
+// initQueue лениво инициализирует внутреннюю очередь обновлений.
 func initQueue(size int) {
 	if updateQueue == nil {
 		updateQueue = make(chan *tgbotapi.Update, size)
 	}
 }
 
-// EnqueueUpdate pushes an update into the queue (drops if full).
+// EnqueueUpdate кладет update в очередь.
+// При переполнении update отбрасывается (drop) и фиксируется в логах.
 func EnqueueUpdate(update *tgbotapi.Update) {
 	if update == nil {
 		return
@@ -30,7 +34,8 @@ func EnqueueUpdate(update *tgbotapi.Update) {
 	}
 }
 
-// StartWorkers launches numWorkers goroutines processing updates from the queue.
+// StartWorkers запускает numWorkers горутин, которые читают очередь
+// и последовательно обрабатывают полученные update.
 func (b *Bot) StartWorkers(numWorkers int, queueSize int) {
 	if b.api == nil || numWorkers <= 0 {
 		return

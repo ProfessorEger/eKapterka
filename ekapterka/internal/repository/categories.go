@@ -1,5 +1,8 @@
 package repository
 
+// Файл содержит операции чтения дерева категорий:
+// получение категории по ID, дочерних категорий и списка leaf-категорий.
+
 import (
 	"context"
 	"ekapterka/internal/models"
@@ -11,6 +14,7 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+// GetCategoryByID возвращает категорию по ее ID (document ID).
 func (c *Client) GetCategoryByID(ctx context.Context, id string) (*models.Category, error) {
 	doc, err := c.db.Collection("categories").Doc(id).Get(ctx)
 	if err != nil {
@@ -25,6 +29,8 @@ func (c *Client) GetCategoryByID(ctx context.Context, id string) (*models.Catego
 	return &cat, nil
 }
 
+// GetChildCategories возвращает дочерние категории для parentID.
+// При parentID == nil используются корневые категории (parent_id == root).
 func (c *Client) GetChildCategories(ctx context.Context, parentID *string) ([]models.Category, error) {
 	q := c.db.Collection("categories").Query
 
@@ -62,6 +68,8 @@ func (c *Client) GetChildCategories(ctx context.Context, parentID *string) ([]mo
 	return result, nil
 }
 
+// GetLeafCategories возвращает все листовые категории (is_leaf=true).
+// Результат дополнительно сортируется по полному path для стабильного вывода.
 func (c *Client) GetLeafCategories(ctx context.Context) ([]models.Category, error) {
 	q := c.db.Collection("categories").Query.
 		Where("is_leaf", "==", true)
