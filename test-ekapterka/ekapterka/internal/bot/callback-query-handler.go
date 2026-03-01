@@ -4,6 +4,7 @@ import (
 	"ekapterka/internal/models"
 	"html"
 	"log"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -235,6 +236,8 @@ func (b *Bot) handleItemSelect(cb *tgbotapi.CallbackQuery, payload string) {
 }
 
 func renderItemCardText(item *models.Item, isAdmin bool) (string, string) {
+	const rentalDateLayout = "02.01.2006"
+
 	lines := []string{
 		"<code>" + html.EscapeString(item.ID) + "</code>",
 	}
@@ -242,9 +245,34 @@ func renderItemCardText(item *models.Item, isAdmin bool) (string, string) {
 		lines = append(lines, "<code>"+html.EscapeString(item.CategoryID)+"</code>")
 	}
 
-	lines = append(lines, html.EscapeString(item.Title))
+	lines = append(lines, "<b>"+html.EscapeString(item.Title)+"</b>")
 	if desc := strings.TrimSpace(item.Description); desc != "" {
 		lines = append(lines, html.EscapeString(desc))
+	}
+
+	if len(item.Rentals) == 0 {
+		lines = append(lines, "")
+		lines = append(lines, "✅ Свободно")
+	} else {
+		lines = append(lines, "")
+		lines = append(lines, "Арендовано:")
+		periods := make([]models.Rental, len(item.Rentals))
+		copy(periods, item.Rentals)
+		sort.Slice(periods, func(i, j int) bool {
+			if periods[i].Start.Equal(periods[j].Start) {
+				return periods[i].End.Before(periods[j].End)
+			}
+			return periods[i].Start.Before(periods[j].Start)
+		})
+
+		for i, period := range periods {
+			lines = append(lines, strconv.Itoa(i+1)+". "+period.Start.Format(rentalDateLayout)+"-"+period.End.Format(rentalDateLayout))
+			if isAdmin {
+				if desc := strings.TrimSpace(period.Description); desc != "" {
+					lines = append(lines, "Описание: "+html.EscapeString(desc))
+				}
+			}
+		}
 	}
 
 	lines = append(lines, "\nДля того чтобы арендовать, пишите каптерщику @ProfessorEger")

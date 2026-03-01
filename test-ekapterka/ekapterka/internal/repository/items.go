@@ -33,15 +33,6 @@ func itemFromDoc(doc *firestore.DocumentSnapshot) models.Item {
 		item.UpdatedAt = v
 	}
 
-	if rawPath, ok := data["category_path"].([]interface{}); ok {
-		item.CategoryPath = make([]string, 0, len(rawPath))
-		for _, p := range rawPath {
-			if s, ok := p.(string); ok {
-				item.CategoryPath = append(item.CategoryPath, s)
-			}
-		}
-	}
-
 	if rawTags, ok := data["tags"].([]interface{}); ok {
 		item.Tags = make([]string, 0, len(rawTags))
 		for _, t := range rawTags {
@@ -57,6 +48,39 @@ func itemFromDoc(doc *firestore.DocumentSnapshot) models.Item {
 				item.PhotoURLs = append(item.PhotoURLs, s)
 			}
 		}
+	}
+	parseRentals := func(rawRentals []interface{}) {
+		item.Rentals = make([]models.Rental, 0, len(rawRentals))
+		for _, rawRental := range rawRentals {
+			rentalMap, ok := rawRental.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			start, okStart := rentalMap["start"].(time.Time)
+			end, okEnd := rentalMap["end"].(time.Time)
+			if !okStart || !okEnd {
+				continue
+			}
+
+			description := ""
+			if v, ok := rentalMap["description"].(string); ok {
+				description = v
+			}
+
+			item.Rentals = append(item.Rentals, models.Rental{
+				Start:       start,
+				End:         end,
+				Description: description,
+			})
+		}
+	}
+
+	if rawRentals, ok := data["rentals"].([]interface{}); ok {
+		parseRentals(rawRentals)
+	} else if rawRentalPeriods, ok := data["rental_periods"].([]interface{}); ok {
+		// Backward compatibility with old field name.
+		parseRentals(rawRentalPeriods)
 	}
 
 	return item
@@ -159,5 +183,21 @@ func (c *Client) UpdateItem(
 
 func (c *Client) DeleteItemByID(ctx context.Context, id string) error {
 	_, err := c.db.Collection("items").Doc(id).Delete(ctx)
+	return err
+}
+
+func (c *Client) AddRentalPeriodToItem(ctx context.Context, id string, period models.Rental) error {
+	_, err := c.db.Collection("items").Doc(id).Update(ctx, []firestore.Update{
+		{Path: "rentals", Value: firestore.ArrayUnion(period)},
+		{Path: "updated_at", Value: time.Now()},
+	})
+	return err
+}
+
+func (c *Client) UpdateItemRentals(ctx context.Context, id string, rentals []models.Rental) error {
+	_, err := c.db.Collection("items").Doc(id).Update(ctx, []firestore.Update{
+		{Path: "rentals", Value: rentals},
+		{Path: "updated_at", Value: time.Now()},
+	})
 	return err
 }
