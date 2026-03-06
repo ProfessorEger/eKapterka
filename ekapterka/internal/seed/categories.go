@@ -17,7 +17,47 @@ func strPtr(s string) *string {
 // - ID должен быть стабильным (используется в командах /add, /edit и callback payload).
 // - Path хранит путь из ID, а не из человекочитаемых Title.
 // - Для корневых узлов ParentID = models.RootParentID.
+
 var Categories = []models.Category{
+	{
+		ID:       "tents",
+		Title:    "Палатки",
+		ParentID: strPtr(models.RootParentID),
+		Path:     []string{"tents"},
+		Level:    0,
+		Order:    10,
+		IsLeaf:   true,
+	},
+	{
+		ID:       "backpacks_normal",
+		Title:    "Рюкзаки",
+		ParentID: strPtr(models.RootParentID),
+		Path:     []string{"backpacks"},
+		Level:    0,
+		Order:    20,
+		IsLeaf:   true,
+	},
+	{
+		ID:       "sleeping_bags",
+		Title:    "Спальные мешки",
+		ParentID: strPtr(models.RootParentID),
+		Path:     []string{"sleeping_bags"},
+		Level:    0,
+		Order:    30,
+		IsLeaf:   true,
+	},
+	{
+		ID:       "axes_saws",
+		Title:    "Топоры/пилы",
+		ParentID: strPtr(models.RootParentID),
+		Path:     []string{"axes_saws"},
+		Level:    0,
+		Order:    40,
+		IsLeaf:   true,
+	},
+}
+
+/*var Categories = []models.Category{
 	// ===== Снаряжение =====
 	{
 		ID:       "equipment",
@@ -332,3 +372,4 @@ var Categories = []models.Category{
 		IsLeaf:   true,
 	},
 }
+*/
