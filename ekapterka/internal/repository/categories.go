@@ -8,7 +8,6 @@ import (
 	"ekapterka/internal/models"
 	"log"
 	"sort"
-	"strings"
 
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
@@ -69,7 +68,7 @@ func (c *Client) GetChildCategories(ctx context.Context, parentID *string) ([]mo
 }
 
 // GetLeafCategories возвращает все листовые категории (is_leaf=true).
-// Результат дополнительно сортируется по полному path для стабильного вывода.
+// Результат дополнительно сортируется для стабильного вывода.
 func (c *Client) GetLeafCategories(ctx context.Context) ([]models.Category, error) {
 	q := c.db.Collection("categories").Query.
 		Where("is_leaf", "==", true)
@@ -98,9 +97,13 @@ func (c *Client) GetLeafCategories(ctx context.Context) ([]models.Category, erro
 	}
 
 	sort.Slice(result, func(i, j int) bool {
-		left := strings.Join(result[i].Path, "/")
-		right := strings.Join(result[j].Path, "/")
-		return left < right
+		if result[i].Order != result[j].Order {
+			return result[i].Order < result[j].Order
+		}
+		if result[i].Title != result[j].Title {
+			return result[i].Title < result[j].Title
+		}
+		return result[i].ID < result[j].ID
 	})
 
 	return result, nil

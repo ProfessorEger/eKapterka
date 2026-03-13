@@ -194,8 +194,8 @@ func (b *Bot) handleLeafCategoriesCommand(update *tgbotapi.Update) {
 	var sb strings.Builder
 	for _, cat := range categories {
 		title := cat.Title
-		if strings.TrimSpace(title) == "" && len(cat.Path) > 0 {
-			title = cat.Path[len(cat.Path)-1]
+		if strings.TrimSpace(title) == "" {
+			title = cat.ID
 		}
 		sb.WriteString(fmt.Sprintf("<code>%s</code> %s\n", html.EscapeString(cat.ID), html.EscapeString(title)))
 	}

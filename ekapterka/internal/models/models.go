@@ -15,13 +15,11 @@ const USER = "user"
 
 // Category описывает узел дерева категорий снаряжения/инвентаря.
 type Category struct {
-	ID       string   `firestore:"id"`
-	Title    string   `firestore:"title"`
-	ParentID *string  `firestore:"parent_id"`
-	Path     []string `firestore:"path"`
-	Level    int      `firestore:"level"`
-	Order    int      `firestore:"order"`
-	IsLeaf   bool     `firestore:"is_leaf"`
+	ID       string  `firestore:"id"`
+	Title    string  `firestore:"title"`
+	ParentID *string `firestore:"parent_id"`
+	Order    int     `firestore:"order"`
+	IsLeaf   bool    `firestore:"is_leaf"`
 }
 
 // Rental — период аренды конкретного предмета.
