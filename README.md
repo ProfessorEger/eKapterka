@@ -32,6 +32,7 @@ eKapterka is a Telegram bot for browsing and managing outdoor gear inventory, wi
 - Admin CRUD flows for items.
 - Rental period management (add/remove rental windows).
 - Multi-line descriptions in `/add` and `/edit` command flows.
+- User profile shows currently rented items.
 
 ## Tech Stack
 
@@ -297,8 +298,8 @@ Admin commands:
 - `/add` - create item
 - `/edit <id>` - edit item
 - `/rm <id>` - delete item
-- `/rent <id>` - add rental period
-- `/unr <id> <number>` - remove rental period by index
+- `/rent <id>` - add rental period (requires renter Telegram ID)
+- `/unr <rental_id>` - cancel rental by rental document ID
 
 `/add` format (supports multi-line description):
 
@@ -328,6 +329,7 @@ Admin commands:
 /rent <item_id>
 01.01.2025
 10.02.2025
+<renter telegram_id>
 <optional admin note>
 ```
 
@@ -335,15 +337,15 @@ Admin commands:
 
 Collection `categories`:
 
-- `id`, `title`, `parent_id`, `path`, `level`, `order`, `is_leaf`
+- `id`, `title`, `parent_id`, `order`, `is_leaf`
 
 Collection `items`:
 
-- `title`, `description`, `category_id`, `tags`, `photo_urls`, `created_at`, `updated_at`, `rentals[]`
+- `title`, `description`, `category_id`, `tags`, `photo_urls`, `created_at`, `updated_at`
 
-`rentals[]` entry:
+Collection `rentals`:
 
-- `start`, `end`, `description`
+- `item_id`, `start`, `end`, `description`, `user_id`, `username`
 
 Collection `users`:
 

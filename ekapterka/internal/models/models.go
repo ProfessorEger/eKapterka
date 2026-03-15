@@ -44,7 +44,6 @@ type Item struct {
 	PhotoURLs   []string  `firestore:"photo_urls"`
 	CreatedAt   time.Time `firestore:"created_at"`
 	UpdatedAt   time.Time `firestore:"updated_at"`
-	Rentals     []Rental  `firestore:"rentals"`
 }
 
 // UserState хранит минимальное состояние пользователя для авторизации и UX.

@@ -32,6 +32,7 @@ eKapterka — это Telegram-бот для просмотра и управле
 - Админские CRUD-потоки для предметов.
 - Управление периодами аренды (добавление/удаление).
 - Многострочные описания в командах `/add` и `/edit`.
+- Профиль пользователя показывает текущее арендованное снаряжение.
 
 ## Технологический стек
 
@@ -297,8 +298,8 @@ gcloud run services describe "$SERVICE_NAME" \
 - `/add` - создает предмет
 - `/edit <id>` - редактирует предмет
 - `/rm <id>` - удаляет предмет
-- `/rent <id>` - добавляет период аренды
-- `/unr <id> <number>` - удаляет период аренды по индексу
+- `/rent <id>` - добавляет период аренды (нужен Telegram ID арендатора)
+- `/unr <rental_id>` - отменяет аренду по ID документа аренды
 
 Формат `/add` (поддерживает многострочное описание):
 
@@ -328,22 +329,23 @@ gcloud run services describe "$SERVICE_NAME" \
 /rent <item_id>
 01.01.2025
 10.02.2025
-<optional admin note>
+<telegram_id арендатора>
+<опциональная заметка для админа>
 ```
 
 ## Модель данных (Firestore)
 
 Коллекция `categories`:
 
-- `id`, `title`, `parent_id`, `path`, `level`, `order`, `is_leaf`
+- `id`, `title`, `parent_id`, `order`, `is_leaf`
 
 Коллекция `items`:
 
-- `title`, `description`, `category_id`, `tags`, `photo_urls`, `created_at`, `updated_at`, `rentals[]`
+- `title`, `description`, `category_id`, `tags`, `photo_urls`, `created_at`, `updated_at`
 
-Элемент `rentals[]`:
+Коллекция `rentals`:
 
-- `start`, `end`, `description`
+- `item_id`, `start`, `end`, `description`, `user_id`, `username`
 
 Коллекция `users`:
 

@@ -95,7 +95,7 @@ When modifying, test these carefully:
 1. Callback payload formats (`search:*`, `menu:*`) because navigation depends on exact string patterns.
 2. Command parsers for multiline input and caption-command support.
 3. Photo replacement flow (`/edit`) because it combines DB update and object deletion.
-4. Rental list ordering/removal (`/unr`) because index is based on sorted order.
+4. Rental create/remove flows (`/rent`, `/unr`) because they touch a separate `rentals` collection and item timestamps.
 
 ## 7. Suggested Development Workflow
 

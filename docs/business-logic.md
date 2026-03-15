@@ -60,6 +60,8 @@ A rental is a period with:
 - start date
 - end date
 - optional admin description
+- renter Telegram user ID
+- optional renter username
 
 Business intent:
 
@@ -85,6 +87,11 @@ Business output of item card:
 - inventory identity
 - readability of current availability
 - human contact path for renting (quartermaster contact line)
+
+## 3.3 Profile
+
+- User can open profile to see items they are renting.
+- Profile list is built from rentals where `user_id` matches the Telegram user.
 
 ## 4. Admin Business Flow
 
@@ -162,6 +169,7 @@ Format:
 /rent <item_id>
 DD.MM.YYYY
 DD.MM.YYYY
+<renter telegram_id>
 <optional multiline admin note>
 ```
 
@@ -170,23 +178,24 @@ Rules:
 1. Dates must parse as `02.01.2006`.
 2. End date cannot be earlier than start date.
 3. Item must exist.
-4. Rental is appended to array.
+4. Renter `telegram_id` must be a positive number.
+5. Rental is stored as a separate document in `rentals`.
 
 Business effect:
 
 - Item card reflects booking window and reduces accidental double-assignment.
 
-## 4.6 Remove Rental (`/unr <id> <number>`)
+## 4.6 Remove Rental (`/unr <rental_id>`)
 
 Rules:
 
-1. Rental selection uses 1-based index from sorted rentals.
-2. Sorting key: start date, then end date.
-3. Selected rental is removed and full array is rewritten.
+1. Rental is resolved by Firestore document ID.
+2. Selected rental document is deleted.
+3. Related item `updated_at` is refreshed.
 
 Business rationale:
 
-- User-facing rental numbering remains deterministic and readable.
+- Rental records become addressable and removable without list re-numbering.
 
 ## 5. Availability Logic
 

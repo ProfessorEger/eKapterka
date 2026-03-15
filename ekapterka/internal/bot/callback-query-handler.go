@@ -220,7 +220,13 @@ func (b *Bot) handleItemSelect(cb *tgbotapi.CallbackQuery, payload string) {
 		}
 	}
 
-	text, parseMode := renderItemCardText(item, isAdmin, b.getQuartermasterContact())
+	rentals, err := b.repo.GetRentalsByItemID(b.ctx, itemID)
+	if err != nil {
+		log.Printf("get rentals for item %s failed: %v", itemID, err)
+		rentals = nil
+	}
+
+	text, parseMode := renderItemCardText(item, rentals, isAdmin, b.getQuartermasterContact())
 
 	kb := &tgbotapi.InlineKeyboardMarkup{
 		InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{
@@ -253,7 +259,7 @@ func (b *Bot) handleItemSelect(cb *tgbotapi.CallbackQuery, payload string) {
 
 // renderItemCardText собирает HTML-текст карточки предмета.
 // Для админа дополнительно показываются CategoryID и описания аренд.
-func renderItemCardText(item *models.Item, isAdmin bool, quartermasterContact string) (string, string) {
+func renderItemCardText(item *models.Item, rentals []models.Rental, isAdmin bool, quartermasterContact string) (string, string) {
 	const rentalDateLayout = "02.01.2006"
 
 	lines := []string{
@@ -268,14 +274,14 @@ func renderItemCardText(item *models.Item, isAdmin bool, quartermasterContact st
 		lines = append(lines, html.EscapeString(desc))
 	}
 
-	if len(item.Rentals) == 0 {
+	if len(rentals) == 0 {
 		lines = append(lines, "")
 		lines = append(lines, "✅ Свободно")
 	} else {
 		lines = append(lines, "")
 		lines = append(lines, "Арендовано:")
-		periods := make([]models.Rental, len(item.Rentals))
-		copy(periods, item.Rentals)
+		periods := make([]models.Rental, len(rentals))
+		copy(periods, rentals)
 		sort.Slice(periods, func(i, j int) bool {
 			if periods[i].Start.Equal(periods[j].Start) {
 				return periods[i].End.Before(periods[j].End)
@@ -510,7 +516,13 @@ func (b *Bot) handleProfileItemSelect(cb *tgbotapi.CallbackQuery, payload string
 		}
 	}
 
-	text, parseMode := renderItemCardText(item, isAdmin, b.getQuartermasterContact())
+	rentals, err := b.repo.GetRentalsByItemID(b.ctx, itemID)
+	if err != nil {
+		log.Printf("get rentals for item %s failed: %v", itemID, err)
+		rentals = nil
+	}
+
+	text, parseMode := renderItemCardText(item, rentals, isAdmin, b.getQuartermasterContact())
 	kb := &tgbotapi.InlineKeyboardMarkup{
 		InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{
 			{

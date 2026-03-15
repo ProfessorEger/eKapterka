@@ -69,7 +69,8 @@ Responsibilities:
 Provides Firestore access abstractions:
 
 - `categories.go`: category tree reads and leaf listing.
-- `items.go`: CRUD and rental update operations for items.
+- `items.go`: CRUD and item reads (merging legacy embedded rentals).
+- `rentals.go`: rental collection CRUD and lookups by item/user.
 - `users.go`: role persistence and user-state bootstrap.
 - `client.go`: Firestore client initialization.
 
@@ -78,7 +79,6 @@ Notable design choices:
 - Firestore project ID is provided via required env var `FIRESTORE_PROJECT_ID`.
 - Item pagination uses `offset` + `limit+1` for has-next detection.
 - Item query includes fallback without ordering if indexed order query fails.
-- Backward compatibility for legacy field `rental_periods` when decoding item documents.
 
 ## 3.4 Storage Layer (`internal/storage`)
 
@@ -90,7 +90,7 @@ Notable design choices:
 ## 3.5 Seed Tool (`cmd/seed`, `internal/seed`)
 
 - Writes predefined category tree to Firestore `categories` collection.
-- Uses deterministic IDs and full path metadata for each category.
+- Uses deterministic IDs, parent linkage, ordering, and leaf markers.
 - Seed tool also reads Firestore project ID from `FIRESTORE_PROJECT_ID`.
 
 ## 4. Request/Update Processing Flow
@@ -133,8 +133,8 @@ Admin commands:
 - `/edit <id>`: update category/title/description, optionally replace photo.
 - `/rm`: delete item and associated GCS photos.
 - `/cat`: list leaf categories.
-- `/rent <id>`: append rental period.
-- `/unr <id> <n>`: remove rental by sorted ordinal.
+- `/rent <id>`: create rental record (dates + renter Telegram ID).
+- `/unr <rental_id>`: remove rental by document ID.
 - `/cmd`: show command list based on role.
 
 ## 5. Rendering Strategy

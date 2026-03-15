@@ -1,13 +1,11 @@
 package repository
 
 // Файл содержит операции работы с предметами:
-// создание, чтение, редактирование, удаление и управление периодами аренды.
+// создание, чтение, редактирование и удаление.
 
 import (
 	"context"
 	"log"
-	"strconv"
-	"strings"
 	"time"
 
 	"ekapterka/internal/models"
@@ -17,7 +15,6 @@ import (
 )
 
 // itemFromDoc преобразует Firestore документ в доменную модель Item.
-// Здесь также поддерживается обратная совместимость по полю rental_periods.
 func itemFromDoc(doc *firestore.DocumentSnapshot) models.Item {
 	data := doc.Data()
 	item := models.Item{
@@ -56,63 +53,6 @@ func itemFromDoc(doc *firestore.DocumentSnapshot) models.Item {
 			}
 		}
 	}
-	parseRentals := func(rawRentals []interface{}) {
-		item.Rentals = make([]models.Rental, 0, len(rawRentals))
-		for _, rawRental := range rawRentals {
-			rentalMap, ok := rawRental.(map[string]interface{})
-			if !ok {
-				continue
-			}
-
-			start, okStart := rentalMap["start"].(time.Time)
-			end, okEnd := rentalMap["end"].(time.Time)
-			if !okStart || !okEnd {
-				continue
-			}
-
-			description := ""
-			if v, ok := rentalMap["description"].(string); ok {
-				description = v
-			}
-
-			var userID int64
-			switch v := rentalMap["user_id"].(type) {
-			case int64:
-				userID = v
-			case int:
-				userID = int64(v)
-			case float64:
-				userID = int64(v)
-			}
-
-			username := ""
-			if v, ok := rentalMap["username"].(string); ok {
-				username = v
-			}
-
-			itemID := ""
-			if v, ok := rentalMap["item_id"].(string); ok {
-				itemID = v
-			}
-
-			item.Rentals = append(item.Rentals, models.Rental{
-				ItemID:      itemID,
-				Start:       start,
-				End:         end,
-				Description: description,
-				UserID:      userID,
-				Username:    username,
-			})
-		}
-	}
-
-	if rawRentals, ok := data["rentals"].([]interface{}); ok {
-		parseRentals(rawRentals)
-	} else if rawRentalPeriods, ok := data["rental_periods"].([]interface{}); ok {
-		// Backward compatibility with old field name.
-		parseRentals(rawRentalPeriods)
-	}
-
 	return item
 }
 
@@ -197,54 +137,7 @@ func (c *Client) GetItemByID(ctx context.Context, id string) (*models.Item, erro
 
 	item := itemFromDoc(doc)
 
-	rentals, err := c.GetRentalsByItemID(ctx, id)
-	if err != nil {
-		log.Printf("get rentals for item %s failed: %v", id, err)
-		return &item, nil
-	}
-	if len(rentals) > 0 {
-		item.Rentals = mergeRentals(item.Rentals, rentals)
-	}
-
 	return &item, nil
-}
-
-func mergeRentals(existing []models.Rental, incoming []models.Rental) []models.Rental {
-	if len(existing) == 0 {
-		return incoming
-	}
-	if len(incoming) == 0 {
-		return existing
-	}
-
-	seen := make(map[string]struct{}, len(existing)+len(incoming))
-	result := make([]models.Rental, 0, len(existing)+len(incoming))
-
-	addRental := func(r models.Rental) {
-		key := rentalKey(r)
-		if _, ok := seen[key]; ok {
-			return
-		}
-		seen[key] = struct{}{}
-		result = append(result, r)
-	}
-
-	for _, r := range existing {
-		addRental(r)
-	}
-	for _, r := range incoming {
-		addRental(r)
-	}
-
-	return result
-}
-
-func rentalKey(r models.Rental) string {
-	return r.Start.UTC().Format(time.RFC3339Nano) + "|" +
-		r.End.UTC().Format(time.RFC3339Nano) + "|" +
-		strconv.FormatInt(r.UserID, 10) + "|" +
-		strings.ToLower(strings.TrimSpace(r.Username)) + "|" +
-		strings.TrimSpace(r.Description)
 }
 
 // GetItemsByIDs возвращает предметы по списку ID.
@@ -296,15 +189,5 @@ func (c *Client) UpdateItem(
 // DeleteItemByID удаляет документ предмета по ID.
 func (c *Client) DeleteItemByID(ctx context.Context, id string) error {
 	_, err := c.db.Collection("items").Doc(id).Delete(ctx)
-	return err
-}
-
-// UpdateItemRentals полностью перезаписывает массив rentals.
-// Используется, например, при удалении аренды по номеру.
-func (c *Client) UpdateItemRentals(ctx context.Context, id string, rentals []models.Rental) error {
-	_, err := c.db.Collection("items").Doc(id).Update(ctx, []firestore.Update{
-		{Path: "rentals", Value: rentals},
-		{Path: "updated_at", Value: time.Now()},
-	})
 	return err
 }

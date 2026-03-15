@@ -33,6 +33,13 @@ Pagination:
 - Page size is fixed to 10 items.
 - Prev/next arrows rendered based on page index and `hasNext`.
 
+Profile flow:
+
+- `menu:profile` loads user rentals by `user_id` from `rentals` collection.
+- Items list is built from unique `item_id` values and sorted by title.
+- Empty rentals show "У вас пока нет аренд" with back button.
+- Selecting an item opens the same item card renderer as search flow.
+
 ## 3. Commands
 
 Supported commands:
@@ -141,6 +148,7 @@ Admin-only format:
 /rent <item_id>
 01.01.2025
 10.02.2025
+<renter telegram_id>
 <optional multiline admin note>
 ```
 
@@ -148,18 +156,18 @@ Behavior:
 
 - Parses dates using `02.01.2006` format.
 - Ensures `end >= start`.
-- Appends rental using Firestore `ArrayUnion`.
+- Validates `telegram_id` as positive int64.
+- Creates rental document in `rentals` collection and updates item `updated_at`.
 
-## 3.9 `/unr <id> <number>`
+## 3.9 `/unr <rental_id>`
 
 Admin-only.
 
 Behavior:
 
-- Fetches item rentals.
-- Sorts rentals by start date, then end date.
-- Removes rental by 1-based index in sorted view.
-- Writes full updated rentals array back to Firestore.
+- Fetches rental document by ID.
+- Deletes rental document.
+- Updates related item `updated_at` timestamp.
 
 ## 4. Item Card Rendering
 
