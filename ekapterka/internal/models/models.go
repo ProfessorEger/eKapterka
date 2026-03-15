@@ -24,9 +24,13 @@ type Category struct {
 
 // Rental — период аренды конкретного предмета.
 type Rental struct {
+	ID          string    `firestore:"-"`
+	ItemID      string    `firestore:"item_id"`
 	Start       time.Time `firestore:"start"`
 	End         time.Time `firestore:"end"`
 	Description string    `firestore:"description"`
+	UserID      int64     `firestore:"user_id"`
+	Username    string    `firestore:"username"`
 }
 
 // Item — карточка предмета в каталоге.

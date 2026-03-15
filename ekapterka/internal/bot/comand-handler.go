@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -349,10 +348,10 @@ func (b *Bot) handleRentCommand(update *tgbotapi.Update) {
 	}
 
 	lines := strings.Split(text, "\n")
-	if len(lines) < 3 {
+	if len(lines) < 4 {
 		msg := tgbotapi.NewMessage(
 			chatID,
-			"❌ Неверный формат.\n\nИспользуй:\n/rent <id>\n01.01.2025\n10.02.2025\n[описание для админа - опционально]",
+			"❌ Неверный формат.\n\nИспользуй:\n/rent <id>\n01.01.2025\n10.02.2025\ntg_id\n[описание для админа - опционально]",
 		)
 		b.api.Send(msg)
 		return
@@ -368,9 +367,10 @@ func (b *Bot) handleRentCommand(update *tgbotapi.Update) {
 	itemID := strings.TrimSpace(headFields[1])
 	startRaw := strings.TrimSpace(lines[1])
 	endRaw := strings.TrimSpace(lines[2])
+	userIDRaw := strings.TrimSpace(lines[3])
 	description := ""
-	if len(lines) > 3 {
-		description = strings.TrimSpace(strings.Join(lines[3:], "\n"))
+	if len(lines) > 4 {
+		description = strings.TrimSpace(strings.Join(lines[4:], "\n"))
 	}
 
 	const rentalDateLayout = "02.01.2006"
@@ -400,13 +400,21 @@ func (b *Bot) handleRentCommand(update *tgbotapi.Update) {
 		return
 	}
 
+	userID, err := strconv.ParseInt(userIDRaw, 10, 64)
+	if err != nil || userID <= 0 {
+		msg := tgbotapi.NewMessage(chatID, "❌ Некорректный tg_id. Укажите числовой Telegram ID пользователя.")
+		b.api.Send(msg)
+		return
+	}
+
 	period := models.Rental{
 		Start:       startDate,
 		End:         endDate,
 		Description: description,
+		UserID:      userID,
 	}
 
-	if err = b.repo.AddRentalPeriodToItem(b.ctx, itemID, period); err != nil {
+	if err = b.repo.AddRental(b.ctx, itemID, period); err != nil {
 		msg := tgbotapi.NewMessage(chatID, "❌ Ошибка при добавлении аренды")
 		b.api.Send(msg)
 		return
@@ -416,7 +424,7 @@ func (b *Bot) handleRentCommand(update *tgbotapi.Update) {
 	b.api.Send(msg)
 }
 
-// handleUnrentCommand удаляет аренду по 1-based номеру из отсортированного списка.
+// handleUnrentCommand удаляет аренду по ID.
 func (b *Bot) handleUnrentCommand(update *tgbotapi.Update) {
 	if !b.requireAdmin(update) {
 		return
@@ -424,60 +432,27 @@ func (b *Bot) handleUnrentCommand(update *tgbotapi.Update) {
 
 	chatID := update.Message.Chat.ID
 	args := strings.Fields(strings.TrimSpace(update.Message.CommandArguments()))
-	if len(args) < 2 {
-		msg := tgbotapi.NewMessage(chatID, "❌ Формат: /unr <id> <номер аренды>")
+	if len(args) < 1 {
+		msg := tgbotapi.NewMessage(chatID, "❌ Формат: /unr <rental_id>")
 		b.api.Send(msg)
 		return
 	}
 
-	itemID := strings.TrimSpace(args[0])
-	rentalNumber, err := strconv.Atoi(strings.TrimSpace(args[1]))
-	if err != nil || rentalNumber <= 0 {
-		msg := tgbotapi.NewMessage(chatID, "❌ Номер аренды должен быть положительным числом")
+	rentalID := strings.TrimSpace(args[0])
+	if rentalID == "" {
+		msg := tgbotapi.NewMessage(chatID, "❌ Укажите rental_id")
 		b.api.Send(msg)
 		return
 	}
 
-	item, err := b.repo.GetItemByID(b.ctx, itemID)
+	rental, err := b.repo.GetRentalByID(b.ctx, rentalID)
 	if err != nil {
-		msg := tgbotapi.NewMessage(chatID, "❌ Предмет не найден")
+		msg := tgbotapi.NewMessage(chatID, "❌ Аренда не найдена")
 		b.api.Send(msg)
 		return
 	}
 
-	if len(item.Rentals) == 0 {
-		msg := tgbotapi.NewMessage(chatID, "❌ У предмета нет аренд")
-		b.api.Send(msg)
-		return
-	}
-
-	type indexedRental struct {
-		Index  int
-		Rental models.Rental
-	}
-	sorted := make([]indexedRental, 0, len(item.Rentals))
-	for i, rental := range item.Rentals {
-		sorted = append(sorted, indexedRental{Index: i, Rental: rental})
-	}
-	sort.Slice(sorted, func(i, j int) bool {
-		if sorted[i].Rental.Start.Equal(sorted[j].Rental.Start) {
-			return sorted[i].Rental.End.Before(sorted[j].Rental.End)
-		}
-		return sorted[i].Rental.Start.Before(sorted[j].Rental.Start)
-	})
-
-	if rentalNumber > len(sorted) {
-		msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("❌ Номер аренды вне диапазона: 1..%d", len(sorted)))
-		b.api.Send(msg)
-		return
-	}
-
-	removeIndex := sorted[rentalNumber-1].Index
-	updated := make([]models.Rental, 0, len(item.Rentals)-1)
-	updated = append(updated, item.Rentals[:removeIndex]...)
-	updated = append(updated, item.Rentals[removeIndex+1:]...)
-
-	if err := b.repo.UpdateItemRentals(b.ctx, itemID, updated); err != nil {
+	if err := b.repo.DeleteRental(b.ctx, rental); err != nil {
 		msg := tgbotapi.NewMessage(chatID, "❌ Ошибка при отмене аренды")
 		b.api.Send(msg)
 		return

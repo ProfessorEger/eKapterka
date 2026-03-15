@@ -33,6 +33,10 @@ func (b *Bot) handleCallbackQuery(update *tgbotapi.Update) {
 		b.handleMenuProfileCallback(cb)
 	case cb.Data == "search:root":
 		b.handleMenuFindCallback(cb)
+	case strings.HasPrefix(cb.Data, "profile:items:"):
+		b.handleProfileItemsPageSelect(cb, strings.TrimPrefix(cb.Data, "profile:items:"))
+	case strings.HasPrefix(cb.Data, "profile:item:"):
+		b.handleProfileItemSelect(cb, strings.TrimPrefix(cb.Data, "profile:item:"))
 	case strings.HasPrefix(cb.Data, "search:items:"):
 		b.handleItemsPageSelect(cb, strings.TrimPrefix(cb.Data, "search:items:"))
 	case strings.HasPrefix(cb.Data, "search:item:"):
@@ -279,9 +283,15 @@ func renderItemCardText(item *models.Item, isAdmin bool, quartermasterContact st
 			return periods[i].Start.Before(periods[j].Start)
 		})
 
-		for i, period := range periods {
-			lines = append(lines, strconv.Itoa(i+1)+". "+period.Start.Format(rentalDateLayout)+"-"+period.End.Format(rentalDateLayout))
+		for _, period := range periods {
+			lines = append(lines, period.Start.Format(rentalDateLayout)+"-"+period.End.Format(rentalDateLayout))
 			if isAdmin {
+				if strings.TrimSpace(period.ID) != "" {
+					lines = append(lines, "ID аренды: <code>"+html.EscapeString(period.ID)+"</code>")
+				}
+				if userLabel := formatRentalUser(period); userLabel != "" {
+					lines = append(lines, "Пользователь: "+userLabel)
+				}
 				if desc := strings.TrimSpace(period.Description); desc != "" {
 					lines = append(lines, "Описание: "+html.EscapeString(desc))
 				}
@@ -292,6 +302,24 @@ func renderItemCardText(item *models.Item, isAdmin bool, quartermasterContact st
 	lines = append(lines, "\nДля того чтобы арендовать, пишите каптерщику "+html.EscapeString(quartermasterContact))
 
 	return strings.Join(lines, "\n"), tgbotapi.ModeHTML
+}
+
+func formatRentalUser(period models.Rental) string {
+	username := strings.TrimSpace(period.Username)
+	username = strings.TrimPrefix(username, "@")
+
+	userID := period.UserID
+	if username == "" && userID == 0 {
+		return ""
+	}
+
+	if username != "" && userID != 0 {
+		return "@" + html.EscapeString(username) + " (ID: " + strconv.FormatInt(userID, 10) + ")"
+	}
+	if username != "" {
+		return "@" + html.EscapeString(username)
+	}
+	return "ID: " + strconv.FormatInt(userID, 10)
 }
 
 // getQuartermasterContact получает контакт каптерщика из описания бота
@@ -345,11 +373,169 @@ func firstPhotoURL(photoURLs []string) string {
 
 // handleMenuProfileCallback — заглушка профиля пользователя.
 func (b *Bot) handleMenuProfileCallback(cb *tgbotapi.CallbackQuery) {
-	b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, "Пустой профиль", &tgbotapi.InlineKeyboardMarkup{
+	b.showProfileItemsPage(cb, 0)
+}
+
+func (b *Bot) handleProfileItemsPageSelect(cb *tgbotapi.CallbackQuery, payload string) {
+	page, err := strconv.Atoi(payload)
+	if err != nil || page < 0 {
+		page = 0
+	}
+	b.showProfileItemsPage(cb, page)
+}
+
+func (b *Bot) showProfileItemsPage(cb *tgbotapi.CallbackQuery, page int) {
+	userID := cb.Message.Chat.ID
+	if cb.From != nil {
+		userID = cb.From.ID
+	}
+
+	rentals, err := b.repo.GetRentalsByUserID(b.ctx, userID)
+	if err != nil {
+		b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, "Ошибка загрузки профиля", &tgbotapi.InlineKeyboardMarkup{
+			InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{
+				{
+					tgbotapi.NewInlineKeyboardButtonData("⬅ Назад", "menu:main"),
+				},
+			},
+		})
+		return
+	}
+
+	if len(rentals) == 0 {
+		b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, "У вас пока нет аренд", &tgbotapi.InlineKeyboardMarkup{
+			InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{
+				{
+					tgbotapi.NewInlineKeyboardButtonData("⬅ Назад", "menu:main"),
+				},
+			},
+		})
+		return
+	}
+
+	itemIDs := make(map[string]struct{}, len(rentals))
+	uniqueIDs := make([]string, 0, len(rentals))
+	for _, rental := range rentals {
+		if rental.ItemID == "" {
+			continue
+		}
+		if _, ok := itemIDs[rental.ItemID]; ok {
+			continue
+		}
+		itemIDs[rental.ItemID] = struct{}{}
+		uniqueIDs = append(uniqueIDs, rental.ItemID)
+	}
+
+	items, err := b.repo.GetItemsByIDs(b.ctx, uniqueIDs)
+	if err != nil {
+		b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, "Ошибка загрузки профиля", &tgbotapi.InlineKeyboardMarkup{
+			InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{
+				{
+					tgbotapi.NewInlineKeyboardButtonData("⬅ Назад", "menu:main"),
+				},
+			},
+		})
+		return
+	}
+
+	if len(items) == 0 {
+		b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, "У вас пока нет аренд", &tgbotapi.InlineKeyboardMarkup{
+			InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{
+				{
+					tgbotapi.NewInlineKeyboardButtonData("⬅ Назад", "menu:main"),
+				},
+			},
+		})
+		return
+	}
+
+	sort.Slice(items, func(i, j int) bool {
+		return strings.ToLower(items[i].Title) < strings.ToLower(items[j].Title)
+	})
+
+	const pageSize = 10
+	if page < 0 {
+		page = 0
+	}
+	start := page * pageSize
+	if start >= len(items) {
+		start = 0
+		page = 0
+	}
+	end := start + pageSize
+	if end > len(items) {
+		end = len(items)
+	}
+
+	pageItems := items[start:end]
+	hasNext := end < len(items)
+	kb := renderProfileItemsKeyboard(pageItems, page, hasNext)
+	b.displayMessage(cb.Message.Chat.ID, &cb.Message.MessageID, "Ваше арендованное снаряжение:", kb)
+}
+
+func (b *Bot) handleProfileItemSelect(cb *tgbotapi.CallbackQuery, payload string) {
+	parts := strings.Split(payload, ":p:")
+	if len(parts) != 2 {
+		b.displayMessage(
+			cb.Message.Chat.ID,
+			&cb.Message.MessageID,
+			"Некорректный запрос товара",
+			nil,
+		)
+		return
+	}
+
+	itemID := parts[0]
+	page, err := strconv.Atoi(parts[1])
+	if err != nil || page < 0 {
+		page = 0
+	}
+
+	item, err := b.repo.GetItemByID(b.ctx, itemID)
+	if err != nil {
+		b.displayMessage(
+			cb.Message.Chat.ID,
+			&cb.Message.MessageID,
+			"Товар не найден",
+			nil,
+		)
+		return
+	}
+
+	isAdmin := false
+	if cb.From != nil {
+		isAdmin, err = b.isAdminUser(cb.From.ID)
+		if err != nil {
+			log.Printf("resolve role for user %d failed: %v", cb.From.ID, err)
+		}
+	}
+
+	text, parseMode := renderItemCardText(item, isAdmin, b.getQuartermasterContact())
+	kb := &tgbotapi.InlineKeyboardMarkup{
 		InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{
 			{
-				tgbotapi.NewInlineKeyboardButtonData("⬅ Назад", "menu:main"),
+				tgbotapi.NewInlineKeyboardButtonData(
+					"⬅ Назад",
+					"profile:items:"+strconv.Itoa(page),
+				),
+			},
+			{
+				tgbotapi.NewInlineKeyboardButtonData("🏠 В главное меню", "menu:main"),
 			},
 		},
-	})
+	}
+
+	if photoURL := firstPhotoURL(item.PhotoURLs); photoURL != "" {
+		b.displayPhotoMessageWithParseMode(
+			cb.Message.Chat.ID,
+			&cb.Message.MessageID,
+			photoURL,
+			text,
+			kb,
+			parseMode,
+		)
+		return
+	}
+
+	b.displayMessageWithParseMode(cb.Message.Chat.ID, &cb.Message.MessageID, text, kb, parseMode)
 }

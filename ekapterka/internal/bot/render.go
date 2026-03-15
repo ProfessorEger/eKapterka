@@ -88,6 +88,48 @@ func renderItemsKeyboard(items []models.Item, categoryID string, page int, hasNe
 	}
 }
 
+// renderProfileItemsKeyboard строит список предметов из профиля пользователя плюс пагинацию.
+func renderProfileItemsKeyboard(items []models.Item, page int, hasNext bool) *tgbotapi.InlineKeyboardMarkup {
+	var rows [][]tgbotapi.InlineKeyboardButton
+
+	for _, item := range items {
+		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(
+				item.Title,
+				"profile:item:"+item.ID+":p:"+strconv.Itoa(page),
+			),
+		))
+	}
+
+	pagination := []tgbotapi.InlineKeyboardButton{}
+	if page > 0 {
+		pagination = append(pagination, tgbotapi.NewInlineKeyboardButtonData(
+			"⬅",
+			"profile:items:"+strconv.Itoa(page-1),
+		))
+	}
+	if hasNext {
+		pagination = append(pagination, tgbotapi.NewInlineKeyboardButtonData(
+			"➡",
+			"profile:items:"+strconv.Itoa(page+1),
+		))
+	}
+	if len(pagination) > 0 {
+		rows = append(rows, pagination)
+	}
+
+	rows = append(rows, tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData(
+			"⬅ Назад",
+			"menu:main",
+		),
+	))
+
+	return &tgbotapi.InlineKeyboardMarkup{
+		InlineKeyboard: rows,
+	}
+}
+
 // displayMessage отправляет/редактирует текст без parse mode.
 func (b *Bot) displayMessage(chatID int64, messageID *int, text string, kb *tgbotapi.InlineKeyboardMarkup) {
 	b.displayMessageWithParseMode(chatID, messageID, text, kb, "")

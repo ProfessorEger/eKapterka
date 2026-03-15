@@ -6,6 +6,8 @@ package repository
 import (
 	"context"
 	"log"
+	"strconv"
+	"strings"
 	"time"
 
 	"ekapterka/internal/models"
@@ -73,10 +75,33 @@ func itemFromDoc(doc *firestore.DocumentSnapshot) models.Item {
 				description = v
 			}
 
+			var userID int64
+			switch v := rentalMap["user_id"].(type) {
+			case int64:
+				userID = v
+			case int:
+				userID = int64(v)
+			case float64:
+				userID = int64(v)
+			}
+
+			username := ""
+			if v, ok := rentalMap["username"].(string); ok {
+				username = v
+			}
+
+			itemID := ""
+			if v, ok := rentalMap["item_id"].(string); ok {
+				itemID = v
+			}
+
 			item.Rentals = append(item.Rentals, models.Rental{
+				ItemID:      itemID,
 				Start:       start,
 				End:         end,
 				Description: description,
+				UserID:      userID,
+				Username:    username,
 			})
 		}
 	}
@@ -172,7 +197,81 @@ func (c *Client) GetItemByID(ctx context.Context, id string) (*models.Item, erro
 
 	item := itemFromDoc(doc)
 
+	rentals, err := c.GetRentalsByItemID(ctx, id)
+	if err != nil {
+		log.Printf("get rentals for item %s failed: %v", id, err)
+		return &item, nil
+	}
+	if len(rentals) > 0 {
+		item.Rentals = mergeRentals(item.Rentals, rentals)
+	}
+
 	return &item, nil
+}
+
+func mergeRentals(existing []models.Rental, incoming []models.Rental) []models.Rental {
+	if len(existing) == 0 {
+		return incoming
+	}
+	if len(incoming) == 0 {
+		return existing
+	}
+
+	seen := make(map[string]struct{}, len(existing)+len(incoming))
+	result := make([]models.Rental, 0, len(existing)+len(incoming))
+
+	addRental := func(r models.Rental) {
+		key := rentalKey(r)
+		if _, ok := seen[key]; ok {
+			return
+		}
+		seen[key] = struct{}{}
+		result = append(result, r)
+	}
+
+	for _, r := range existing {
+		addRental(r)
+	}
+	for _, r := range incoming {
+		addRental(r)
+	}
+
+	return result
+}
+
+func rentalKey(r models.Rental) string {
+	return r.Start.UTC().Format(time.RFC3339Nano) + "|" +
+		r.End.UTC().Format(time.RFC3339Nano) + "|" +
+		strconv.FormatInt(r.UserID, 10) + "|" +
+		strings.ToLower(strings.TrimSpace(r.Username)) + "|" +
+		strings.TrimSpace(r.Description)
+}
+
+// GetItemsByIDs возвращает предметы по списку ID.
+func (c *Client) GetItemsByIDs(ctx context.Context, ids []string) ([]models.Item, error) {
+	if len(ids) == 0 {
+		return []models.Item{}, nil
+	}
+
+	refs := make([]*firestore.DocumentRef, 0, len(ids))
+	for _, id := range ids {
+		refs = append(refs, c.db.Collection("items").Doc(id))
+	}
+
+	docs, err := c.db.GetAll(ctx, refs)
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]models.Item, 0, len(docs))
+	for _, doc := range docs {
+		if doc == nil || !doc.Exists() {
+			continue
+		}
+		items = append(items, itemFromDoc(doc))
+	}
+
+	return items, nil
 }
 
 // UpdateItem обновляет базовые поля предмета и время обновления.
@@ -197,15 +296,6 @@ func (c *Client) UpdateItem(
 // DeleteItemByID удаляет документ предмета по ID.
 func (c *Client) DeleteItemByID(ctx context.Context, id string) error {
 	_, err := c.db.Collection("items").Doc(id).Delete(ctx)
-	return err
-}
-
-// AddRentalPeriodToItem добавляет период аренды в массив rentals.
-func (c *Client) AddRentalPeriodToItem(ctx context.Context, id string, period models.Rental) error {
-	_, err := c.db.Collection("items").Doc(id).Update(ctx, []firestore.Update{
-		{Path: "rentals", Value: firestore.ArrayUnion(period)},
-		{Path: "updated_at", Value: time.Now()},
-	})
 	return err
 }
 
