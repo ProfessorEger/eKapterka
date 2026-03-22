@@ -104,7 +104,7 @@ When modifying, test these carefully:
    - `/start`
    - browse categories
    - view item card with/without photo
-   - admin flows (`/getadmin`, `/add`, `/edit`, `/rent`, `/unr`, `/rm`)
+   - admin flows (`/getadmin`, `/grantadmin`, `/revokeadmin`, `/add`, `/edit`, `/rent`, `/unr`, `/rm`)
 3. Keep docs updated when command syntax or env vars change.
 
 ## 8. Contribution Conventions (Recommended)

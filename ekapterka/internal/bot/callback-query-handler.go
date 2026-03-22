@@ -311,19 +311,9 @@ func renderItemCardText(item *models.Item, rentals []models.Rental, isAdmin bool
 }
 
 func formatRentalUser(period models.Rental) string {
-	username := strings.TrimSpace(period.Username)
-	username = strings.TrimPrefix(username, "@")
-
 	userID := period.UserID
-	if username == "" && userID == 0 {
+	if userID == 0 {
 		return ""
-	}
-
-	if username != "" && userID != 0 {
-		return "@" + html.EscapeString(username) + " (ID: " + strconv.FormatInt(userID, 10) + ")"
-	}
-	if username != "" {
-		return "@" + html.EscapeString(username)
 	}
 	return "ID: " + strconv.FormatInt(userID, 10)
 }

@@ -23,7 +23,7 @@ Required:
 Optional:
 
 - `SERVICE_URL`: public base URL used for Telegram `setWebhook` call.
-- `ADMIN_CODE`: secret used for `/getadmin <code>`.
+- `ADMIN_CODE`: secret used for `/getadmin <code>`, `/grantadmin <user_id> <code>`, `/revokeadmin <user_id> <code>`.
 
 Notes:
 
@@ -217,7 +217,8 @@ docker run --rm -p 8080:8080 \
 2. `/start` opens main menu.
 3. Category browsing works (seed applied).
 4. Admin acquisition via `/getadmin <code>` works.
-5. Item create/edit/delete works including photo upload/delete.
+5. Admin can grant/revoke other admins via `/grantadmin` and `/revokeadmin`.
+6. Item create/edit/delete works including photo upload/delete.
 6. Cloud Run logs show no repeated `setWebhook`/storage/firestore errors.
 
 ## 9. Rollback and Safe Changes

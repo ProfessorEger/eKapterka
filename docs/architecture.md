@@ -129,8 +129,10 @@ User command:
 Admin commands:
 
 - `/getadmin <code>`: compare with `ADMIN_CODE`, set role.
-- `/add`: create item with optional photo and multiline description.
-- `/edit <id>`: update category/title/description, optionally replace photo.
+- `/grantadmin <user_id> <code>`: compare with `ADMIN_CODE`, grant admin to target user.
+- `/revokeadmin <user_id> <code>`: compare with `ADMIN_CODE`, revoke admin from target user.
+- `/add`: create item with optional photo and optional multiline description.
+- `/edit <id>`: update category/title/description, optionally replace photo (description can be empty).
 - `/rm`: delete item and associated GCS photos.
 - `/cat`: list leaf categories.
 - `/rent <id>`: create rental record (dates + renter Telegram ID).

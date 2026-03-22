@@ -28,10 +28,10 @@ eKapterka is a Telegram bot for browsing and managing outdoor gear inventory, wi
 
 - Interactive category navigation using Telegram inline keyboards.
 - Item cards with title, description, photos, and rental periods.
-- Admin role support (`user` / `admin`) with role upgrade via secret code.
+- Admin role support (`user` / `admin`) with role upgrade and downgrade via secret code.
 - Admin CRUD flows for items.
 - Rental period management (add/remove rental windows).
-- Multi-line descriptions in `/add` and `/edit` command flows.
+- Optional multi-line descriptions in `/add` and `/edit` command flows.
 - User profile shows currently rented items.
 
 ## Tech Stack
@@ -89,7 +89,7 @@ Required:
 Optional:
 
 - `SERVICE_URL` - public base URL; if set, webhook is registered as `SERVICE_URL + WEBHOOK_PATH`
-- `ADMIN_CODE` - code used by `/getadmin <code>`
+- `ADMIN_CODE` - code used by `/getadmin <code>`, `/grantadmin <user_id> <code>`, `/revokeadmin <user_id> <code>`
 - `GOOGLE_APPLICATION_CREDENTIALS` - path to GCP service account JSON
 
 Important:
@@ -294,6 +294,8 @@ User commands:
 Admin commands:
 
 - `/getadmin <code>` - grant yourself `admin` role if code matches `ADMIN_CODE`
+- `/grantadmin <user_id> <code>` - grant `admin` role to another user (admin-only)
+- `/revokeadmin <user_id> <code>` - revoke `admin` role from a user (admin-only)
 - `/cat` - list leaf categories (`ID + title`)
 - `/add` - create item
 - `/edit <id>` - edit item
@@ -301,7 +303,7 @@ Admin commands:
 - `/rent <id>` - add rental period (requires renter Telegram ID)
 - `/unr <rental_id>` - cancel rental by rental document ID
 
-`/add` format (supports multi-line description):
+`/add` format (description is optional and supports multi-line input):
 
 ```text
 /add
@@ -312,7 +314,7 @@ Admin commands:
 ...
 ```
 
-`/edit` format (supports multi-line description):
+`/edit` format (description is optional and supports multi-line input):
 
 ```text
 /edit <item_id>
@@ -345,7 +347,7 @@ Collection `items`:
 
 Collection `rentals`:
 
-- `item_id`, `start`, `end`, `description`, `user_id`, `username`
+- `item_id`, `start`, `end`, `description`, `user_id`
 
 Collection `users`:
 

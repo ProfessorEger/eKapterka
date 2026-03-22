@@ -28,10 +28,10 @@ eKapterka — это Telegram-бот для просмотра и управле
 
 - Интерактивная навигация по категориям через inline-кнопки Telegram.
 - Карточки предметов с названием, описанием, фото и периодами аренды.
-- Поддержка ролей (`user` / `admin`) с повышением роли через секретный код.
+- Поддержка ролей (`user` / `admin`) с повышением и понижением роли через секретный код.
 - Админские CRUD-потоки для предметов.
 - Управление периодами аренды (добавление/удаление).
-- Многострочные описания в командах `/add` и `/edit`.
+- Опциональные многострочные описания в командах `/add` и `/edit`.
 - Профиль пользователя показывает текущее арендованное снаряжение.
 
 ## Технологический стек
@@ -89,7 +89,7 @@ eKapterka — это Telegram-бот для просмотра и управле
 Опциональные:
 
 - `SERVICE_URL` - публичный base URL; если задан, webhook регистрируется как `SERVICE_URL + WEBHOOK_PATH`
-- `ADMIN_CODE` - код для `/getadmin <code>`
+- `ADMIN_CODE` - код для `/getadmin <code>`, `/grantadmin <user_id> <code>`, `/revokeadmin <user_id> <code>`
 - `GOOGLE_APPLICATION_CREDENTIALS` - путь к JSON-ключу сервисного аккаунта GCP
 
 Важно:
@@ -294,6 +294,8 @@ gcloud run services describe "$SERVICE_NAME" \
 Админские команды:
 
 - `/getadmin <code>` - выдает роль `admin`, если код совпадает с `ADMIN_CODE`
+- `/grantadmin <user_id> <code>` - выдает роль `admin` другому пользователю (требуется роль admin)
+- `/revokeadmin <user_id> <code>` - снимает роль `admin` с пользователя (требуется роль admin)
 - `/cat` - показывает листовые категории (`ID + title`)
 - `/add` - создает предмет
 - `/edit <id>` - редактирует предмет
@@ -301,7 +303,7 @@ gcloud run services describe "$SERVICE_NAME" \
 - `/rent <id>` - добавляет период аренды (нужен Telegram ID арендатора)
 - `/unr <rental_id>` - отменяет аренду по ID документа аренды
 
-Формат `/add` (поддерживает многострочное описание):
+Формат `/add` (описание опционально, поддерживает многострочный ввод):
 
 ```text
 /add
@@ -312,7 +314,7 @@ gcloud run services describe "$SERVICE_NAME" \
 ...
 ```
 
-Формат `/edit` (поддерживает многострочное описание):
+Формат `/edit` (описание опционально, поддерживает многострочный ввод):
 
 ```text
 /edit <item_id>
@@ -345,7 +347,7 @@ gcloud run services describe "$SERVICE_NAME" \
 
 Коллекция `rentals`:
 
-- `item_id`, `start`, `end`, `description`, `user_id`, `username`
+- `item_id`, `start`, `end`, `description`, `user_id`
 
 Коллекция `users`:
 

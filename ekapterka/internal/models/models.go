@@ -30,7 +30,6 @@ type Rental struct {
 	End         time.Time `firestore:"end"`
 	Description string    `firestore:"description"`
 	UserID      int64     `firestore:"user_id"`
-	Username    string    `firestore:"username"`
 }
 
 // Item — карточка предмета в каталоге.

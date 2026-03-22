@@ -89,7 +89,6 @@ Fields:
 - `end` (`timestamp`)
 - `description` (`string`)
 - `user_id` (`int64`): Telegram user ID of renter.
-- `username` (`string`): optional Telegram username (if known).
 
 Query patterns in code:
 
@@ -113,6 +112,8 @@ Role lifecycle:
 
 - On first `/start` or role query, missing user doc is auto-created with `role=user`.
 - `/getadmin <code>` updates role to `admin` if runtime secret matches.
+- `/grantadmin <user_id> <code>` updates role to `admin` for the target user (admin-only).
+- `/revokeadmin <user_id> <code>` updates role to `user` for the target user (admin-only).
 
 ## 3. Cloud Storage Data Model
 

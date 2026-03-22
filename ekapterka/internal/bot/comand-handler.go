@@ -47,6 +47,10 @@ func (b *Bot) handleCommand(update *tgbotapi.Update) {
 		b.handleCommandsCommand(update)
 	case "getadmin":
 		b.handleGetAdminCommand(update)
+	case "grantadmin":
+		b.handleGrantAdminCommand(update)
+	case "revokeadmin":
+		b.handleRevokeAdminCommand(update)
 	default:
 		return
 	}
@@ -113,6 +117,98 @@ func (b *Bot) handleGetAdminCommand(update *tgbotapi.Update) {
 
 }
 
+// handleGrantAdminCommand выдает роль admin указанному пользователю при корректном коде.
+// Доступна только действующим администраторам.
+func (b *Bot) handleGrantAdminCommand(update *tgbotapi.Update) {
+	if !b.requireAdmin(update) {
+		return
+	}
+
+	chatID := update.Message.Chat.ID
+	args := strings.Fields(strings.TrimSpace(update.Message.CommandArguments()))
+	if len(args) < 2 {
+		msg := tgbotapi.NewMessage(chatID, "❌ Формат: /grantadmin <user_id> <код>")
+		b.api.Send(msg)
+		return
+	}
+
+	userID, err := strconv.ParseInt(strings.TrimSpace(args[0]), 10, 64)
+	if err != nil || userID <= 0 {
+		msg := tgbotapi.NewMessage(chatID, "❌ Некорректный user_id")
+		b.api.Send(msg)
+		return
+	}
+
+	code := strings.TrimSpace(args[1])
+	adminCode := strings.TrimSpace(os.Getenv("ADMIN_CODE"))
+	if adminCode == "" {
+		msg := tgbotapi.NewMessage(chatID, "❌ ADMIN_CODE не настроен на сервере")
+		b.api.Send(msg)
+		return
+	}
+	if code != adminCode {
+		msg := tgbotapi.NewMessage(chatID, "❌ Неверный код")
+		b.api.Send(msg)
+		return
+	}
+
+	if err := b.repo.SetUserRole(b.ctx, userID, models.ADMIN); err != nil {
+		log.Printf("set admin role failed for user %d: %v", userID, err)
+		msg := tgbotapi.NewMessage(chatID, "❌ Не удалось выдать роль администратора")
+		b.api.Send(msg)
+		return
+	}
+
+	msg := tgbotapi.NewMessage(chatID, "✅ Роль администратора выдана")
+	b.api.Send(msg)
+}
+
+// handleRevokeAdminCommand снимает роль admin с указанного пользователя при корректном коде.
+// Доступна только действующим администраторам.
+func (b *Bot) handleRevokeAdminCommand(update *tgbotapi.Update) {
+	if !b.requireAdmin(update) {
+		return
+	}
+
+	chatID := update.Message.Chat.ID
+	args := strings.Fields(strings.TrimSpace(update.Message.CommandArguments()))
+	if len(args) < 2 {
+		msg := tgbotapi.NewMessage(chatID, "❌ Формат: /revokeadmin <user_id> <код>")
+		b.api.Send(msg)
+		return
+	}
+
+	userID, err := strconv.ParseInt(strings.TrimSpace(args[0]), 10, 64)
+	if err != nil || userID <= 0 {
+		msg := tgbotapi.NewMessage(chatID, "❌ Некорректный user_id")
+		b.api.Send(msg)
+		return
+	}
+
+	code := strings.TrimSpace(args[1])
+	adminCode := strings.TrimSpace(os.Getenv("ADMIN_CODE"))
+	if adminCode == "" {
+		msg := tgbotapi.NewMessage(chatID, "❌ ADMIN_CODE не настроен на сервере")
+		b.api.Send(msg)
+		return
+	}
+	if code != adminCode {
+		msg := tgbotapi.NewMessage(chatID, "❌ Неверный код")
+		b.api.Send(msg)
+		return
+	}
+
+	if err := b.repo.SetUserRole(b.ctx, userID, models.USER); err != nil {
+		log.Printf("revoke admin role failed for user %d: %v", userID, err)
+		msg := tgbotapi.NewMessage(chatID, "❌ Не удалось снять роль администратора")
+		b.api.Send(msg)
+		return
+	}
+
+	msg := tgbotapi.NewMessage(chatID, "✅ Роль администратора снята")
+	b.api.Send(msg)
+}
+
 // handleAddCommand создает новый предмет.
 // Формат поддерживает многострочное описание и опциональное фото.
 func (b *Bot) handleAddCommand(update *tgbotapi.Update) {
@@ -127,10 +223,10 @@ func (b *Bot) handleAddCommand(update *tgbotapi.Update) {
 	}
 
 	lines := strings.Split(text, "\n")
-	if len(lines) < 4 {
+	if len(lines) < 3 {
 		msg := tgbotapi.NewMessage(
 			chatID,
-			"❌ Неверный формат.\n\nИспользуй:\n/add\nКатегорияID\nНазвание\nОписание",
+			"❌ Неверный формат.\n\nИспользуй:\n/add\nКатегорияID\nНазвание\n[Описание - опционально]",
 		)
 		b.api.Send(msg)
 		return
@@ -138,7 +234,10 @@ func (b *Bot) handleAddCommand(update *tgbotapi.Update) {
 
 	categoryID := strings.TrimSpace(lines[1])
 	title := strings.TrimSpace(lines[2])
-	description := strings.TrimSpace(strings.Join(lines[3:], "\n"))
+	description := ""
+	if len(lines) > 3 {
+		description = strings.TrimSpace(strings.Join(lines[3:], "\n"))
+	}
 
 	if title == "" || categoryID == "" {
 		msg := tgbotapi.NewMessage(chatID, "❌ Название и категория обязательны")
@@ -218,10 +317,10 @@ func (b *Bot) handleEditCommand(update *tgbotapi.Update) {
 	}
 
 	lines := strings.Split(text, "\n")
-	if len(lines) < 4 {
+	if len(lines) < 3 {
 		msg := tgbotapi.NewMessage(
 			chatID,
-			"❌ Неверный формат.\n\nИспользуй:\n/edit <id>\nНовая категория\nНовое название\nНовое описание",
+			"❌ Неверный формат.\n\nИспользуй:\n/edit <id>\nНовая категория\nНовое название\n[Новое описание - опционально]",
 		)
 		b.api.Send(msg)
 		return
@@ -237,7 +336,10 @@ func (b *Bot) handleEditCommand(update *tgbotapi.Update) {
 	itemID := strings.TrimSpace(headFields[1])
 	categoryID := strings.TrimSpace(lines[1])
 	title := strings.TrimSpace(lines[2])
-	description := strings.TrimSpace(strings.Join(lines[3:], "\n"))
+	description := ""
+	if len(lines) > 3 {
+		description = strings.TrimSpace(strings.Join(lines[3:], "\n"))
+	}
 
 	if itemID == "" || title == "" || categoryID == "" {
 		msg := tgbotapi.NewMessage(chatID, "❌ ID, название и категория обязательны")
@@ -491,6 +593,8 @@ func (b *Bot) handleCommandsCommand(update *tgbotapi.Update) {
 			"/cat",
 			"/rent",
 			"/unr",
+			"/grantadmin",
+			"/revokeadmin",
 		)
 	}
 

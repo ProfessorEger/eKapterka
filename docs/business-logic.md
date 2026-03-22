@@ -23,7 +23,8 @@ Core business goals:
 Role assignment model:
 
 - New users default to `user`.
-- Role elevation to `admin` is done via `/getadmin <code>` and runtime secret `ADMIN_CODE`.
+- Role elevation is done via `/getadmin <code>` or by another admin using `/grantadmin <user_id> <code>` with runtime secret `ADMIN_CODE`.
+- Role revocation is done by admins using `/revokeadmin <user_id> <code>` with the same secret.
 
 ## 2.2 Categories
 
@@ -61,7 +62,6 @@ A rental is a period with:
 - end date
 - optional admin description
 - renter Telegram user ID
-- optional renter username
 
 Business intent:
 
@@ -101,6 +101,8 @@ Business output of item card:
 2. Bot compares with `ADMIN_CODE`.
 3. On success, role becomes `admin`.
 
+Admins can also grant or revoke admin role for other users with the same secret code.
+
 Business rationale:
 
 - Lightweight and fast role enablement without additional admin panel.
@@ -119,7 +121,7 @@ Format:
 Rules:
 
 1. `category_id` and `title` are mandatory.
-2. Description supports multiple lines.
+2. Description is optional and supports multiple lines.
 3. If photo attached, largest Telegram photo is uploaded and linked.
 
 Business effect:
@@ -140,7 +142,7 @@ Format:
 Rules:
 
 1. `item_id`, `category_id`, and `title` are required.
-2. Description supports multiple lines.
+2. Description is optional and supports multiple lines (empty clears the description).
 3. If new photo attached:
    - item is updated with new photo URL
    - old photo objects are deleted after successful update
@@ -231,7 +233,7 @@ Business intent:
 
 Admin-only commands:
 
-- `/add`, `/edit`, `/rm`, `/cat`, `/rent`, `/unr`
+- `/add`, `/edit`, `/rm`, `/cat`, `/rent`, `/unr`, `/grantadmin`, `/revokeadmin`
 
 General rules:
 

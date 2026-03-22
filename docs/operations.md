@@ -105,7 +105,7 @@ Fixes:
 
 Symptoms:
 
-- `/getadmin` always fails.
+- `/getadmin`, `/grantadmin`, or `/revokeadmin` always fails.
 
 Checks:
 

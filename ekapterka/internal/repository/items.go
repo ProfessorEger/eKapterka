@@ -82,7 +82,7 @@ func (c *Client) GetItemsByCategoryPage(ctx context.Context, categoryID string, 
 
 	q := c.db.Collection("items").Query.
 		Where("category_id", "==", categoryID).
-		OrderBy("created_at", firestore.Desc).
+		OrderBy("title", firestore.Asc).
 		Offset(offset).
 		Limit(limit + 1)
 
@@ -91,14 +91,8 @@ func (c *Client) GetItemsByCategoryPage(ctx context.Context, categoryID string, 
 		return items, hasNext, nil
 	}
 
-	log.Printf("items ordered query failed, fallback without order: %v", err)
-
-	fallbackQ := c.db.Collection("items").Query.
-		Where("category_id", "==", categoryID).
-		Offset(offset).
-		Limit(limit + 1)
-
-	return c.readItemsQuery(ctx, fallbackQ, limit)
+	log.Printf("items ordered query failed: %v", err)
+	return nil, false, err
 }
 
 // readItemsQuery исполняет Firestore query и вычисляет флаг следующей страницы.
@@ -127,6 +121,7 @@ func (c *Client) readItemsQuery(ctx context.Context, q firestore.Query, limit in
 
 	return items, hasNext, nil
 }
+
 
 // GetItemByID возвращает предмет по document ID.
 func (c *Client) GetItemByID(ctx context.Context, id string) (*models.Item, error) {

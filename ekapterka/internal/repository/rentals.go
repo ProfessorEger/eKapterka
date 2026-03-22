@@ -34,9 +34,6 @@ func rentalFromDoc(doc *firestore.DocumentSnapshot) models.Rental {
 	if v, ok := data["description"].(string); ok {
 		rental.Description = v
 	}
-	if v, ok := data["username"].(string); ok {
-		rental.Username = v
-	}
 	switch v := data["user_id"].(type) {
 	case int64:
 		rental.UserID = v

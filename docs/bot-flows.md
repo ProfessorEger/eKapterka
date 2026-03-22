@@ -32,6 +32,7 @@ Pagination:
 
 - Page size is fixed to 10 items.
 - Prev/next arrows rendered based on page index and `hasNext`.
+- Items inside a category are ordered by title (A→Z).
 
 Profile flow:
 
@@ -53,6 +54,8 @@ Supported commands:
 - `/unr`
 - `/cmd`
 - `/getadmin`
+- `/grantadmin`
+- `/revokeadmin`
 
 ## 3.1 `/start`
 
@@ -70,12 +73,26 @@ Supported commands:
 - On success sets user role to `admin`.
 - On missing/invalid code returns error message.
 
-## 3.4 `/cat`
+## 3.4 `/grantadmin <user_id> <code>`
+
+- Admin-only.
+- Compares input code to env var `ADMIN_CODE`.
+- On success sets target user role to `admin`.
+- On missing/invalid code returns error message.
+
+## 3.5 `/revokeadmin <user_id> <code>`
+
+- Admin-only.
+- Compares input code to env var `ADMIN_CODE`.
+- On success sets target user role to `user`.
+- On missing/invalid code returns error message.
+
+## 3.6 `/cat`
 
 - Admin-only.
 - Lists all leaf categories as `<code>ID</code> title` in HTML parse mode.
 
-## 3.5 `/add`
+## 3.7 `/add`
 
 Admin-only format:
 
@@ -97,10 +114,10 @@ Behavior:
 
 Validation:
 
-- Requires at least 4 lines.
+- Requires at least 3 lines.
 - `category_id` and `title` must be non-empty.
 
-## 3.6 `/edit <id>`
+## 3.8 `/edit <id>`
 
 Admin-only format:
 
@@ -116,17 +133,17 @@ Admin-only format:
 Behavior:
 
 - Parses item ID from first command line.
-- Description is multiline.
+- Description is multiline when provided; can be empty.
 - If new photo attached, uploads new photo and replaces `photo_urls`.
 - If photo replaced, attempts to delete old GCS objects.
 
 Validation:
 
-- Requires at least 4 lines.
+- Requires at least 3 lines.
 - Requires non-empty `item_id`, `category_id`, `title`.
 - Item must exist.
 
-## 3.7 `/rm <id>`
+## 3.9 `/rm <id>`
 
 Admin-only.
 
